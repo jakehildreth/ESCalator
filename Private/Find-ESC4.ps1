@@ -1,7 +1,7 @@
 function Find-ESC4 {
     <#
         .SYNOPSIS
-        Identifies AD CS certificate templates vulnerable to ESC4 attacks by analyzing permissions on template objects.
+        Identifies Active Directory Certificate Services (AD CS) certificate templates vulnerable to ESC4 attacks by analyzing permissions on template objects.
 
         .DESCRIPTION
         This function analyzes Active Directory Certificate Services (ADCS) objects to identify ESC4 vulnerabilities.
@@ -9,7 +9,7 @@ function Find-ESC4 {
         WriteOwner, WriteDacl) on certificate templates, allowing them to modify templates into ESC1/ESC2/ESC3 templates.
 
         .PARAMETER AdcsObjects
-        Array of ADCS objects from Get-AdcsObjects. The function will filter for certificate templates.
+        Array of AD CS objects from Get-AdcsObjects. The function will filter for certificate templates.
 
         .PARAMETER DangerousRights
         Array of dangerous Active Directory rights to check for. Defaults to common dangerous rights.
@@ -168,7 +168,7 @@ function Find-ESC4 {
                                     IdentityReference     = $ace.IdentityReference.Value
                                     IdentityReferenceSID  = $aceSID
                                     ActiveDirectoryRights = $ace.ActiveDirectoryRights.ToString()
-                                    Issue                 = "$($ace.IdentityReference) has been granted $($ace.ActiveDirectoryRights) rights on this template. This principal can likely modify this template into an ESC1 template."
+                                    Issue                 = "$($ace.IdentityReference) has been granted $($ace.ActiveDirectoryRights) rights on this template."
                                     Technique             = 'ESC4'
                                 }
                             }

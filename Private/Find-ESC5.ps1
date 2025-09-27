@@ -90,7 +90,7 @@ function Find-ESC5 {
 
                 # Check owner for ESC5 vulnerability
                 if ($security.Owner) {
-                    Write-Verbose "Template owner: $($security.Owner)"
+                    Write-Verbose "Object owner: $($security.Owner)"
                     
                     # Convert owner to SID if needed
                     try {

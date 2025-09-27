@@ -1,12 +1,12 @@
 function Find-ESC5 {
     <#
         .SYNOPSIS
-        Identifies AD CS objects and containers vulnerable to ESC5 attacks by analyzing permissions on template objects.
+        Identifies Active Directory Certificate Services (AD CS) objects and containers vulnerable to ESC5 attacks by analyzing permissions on AD CS objects.
 
         .DESCRIPTION
         This function analyzes Active Directory Certificate Services (ADCS) objects to identify ESC5 vulnerabilities.
         ESC5 occurs when non-administrative principals have dangerous permissions (like GenericAll, WriteProperty, 
-        WriteOwner, WriteDacl) on AD CS objects and containers, allowing them to modify templates into ESC1/ESC2/ESC3 templates.
+        WriteOwner, WriteDacl) on AD CS objects and containers.
 
         .PARAMETER AdcsObjects
         Array of ADCS objects from Get-AdcsObjects. The function will filter for AD CS objects and containers.
@@ -56,13 +56,13 @@ function Find-ESC5 {
     #requires -Version 5
 
     begin {
-        Write-Verbose "Starting ESC5 template vulnerability scan"
+        Write-Verbose "Starting ESC5 object vulnerability scan"
         Write-Verbose "Dangerous Rights: $($DangerousRights -join ', ')"
         Write-Verbose "Safe Owners Pattern: $SafeOwners"
     }
 
     process {
-        # Filter out certificate templates
+        # Filter out certificate objects
         $Objects = $AdcsObjects | Where-Object { $_.objectClass -notcontains 'pKICertificateTemplate' }
         
         Write-Verbose "Processing $($Objects.Count) AD CS objects and containers"
@@ -71,7 +71,7 @@ function Find-ESC5 {
             $ObjectName = $Object.Name.Value
             $ObjectDN = $Object.distinguishedName.Value
             
-            Write-Verbose "Analyzing template: $ObjectName"
+            Write-Verbose "Analyzing object: $ObjectName"
             
             try {
                 $security = $Object.ObjectSecurity
@@ -112,13 +112,13 @@ function Find-ESC5 {
                                 IdentityReference     = $security.Owner
                                 IdentityReferenceSID  = $ownerSID
                                 ActiveDirectoryRights = 'Owner'
-                                Issue                 = "$($security.Owner) has Owner rights on this template and can modify it into a template that can create ESC1, ESC2, and ESC3 templates."
+                                Issue                 = "$($security.Owner) has Owner rights on this object and can modify it into a object that can create ESC1, ESC2, and ESC3 objects."
                                 Technique             = 'ESC5'
                             }
                         }
                     }
                     catch {
-                        Write-Warning "Failed to process owner '$($security.Owner)' for template $ObjectName : $_"
+                        Write-Warning "Failed to process owner '$($security.Owner)' for object $ObjectName : $_"
                     }
                 }
 
@@ -168,24 +168,24 @@ function Find-ESC5 {
                                     IdentityReference     = $ace.IdentityReference.Value
                                     IdentityReferenceSID  = $aceSID
                                     ActiveDirectoryRights = $ace.ActiveDirectoryRights.ToString()
-                                    Issue                 = "$($ace.IdentityReference) has been granted $($ace.ActiveDirectoryRights) rights on this template. This principal can likely modify this template into an ESC1 template."
+                                    Issue                 = "$($ace.IdentityReference) has been granted $($ace.ActiveDirectoryRights) rights on this object."
                                     Technique             = 'ESC5'
                                 }
                             }
                         }
                         catch {
-                            Write-Warning "Failed to process ACE for identity $($ace.IdentityReference) on template $ObjectName : $_"
+                            Write-Warning "Failed to process ACE for identity $($ace.IdentityReference) on object $ObjectName : $_"
                         }
                     }
                 }
             }
             catch {
-                Write-Warning "Failed to analyze security for template $ObjectName : $_"
+                Write-Warning "Failed to analyze security for object $ObjectName : $_"
             }
         }
     }
 
     end {
-        Write-Verbose "ESC5 template vulnerability scan completed"
+        Write-Verbose "ESC5 object vulnerability scan completed"
     }
 }

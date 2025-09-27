@@ -80,7 +80,7 @@ function Find-ESC4 {
                 $forestName = if ($templateDN) {
                     $parts = $templateDN -split ',DC='
                     if ($parts.Count -gt 1) { 
-                        $parts[1..($parts.Count-1)] -join '.' 
+                        $parts[1..($parts.Count - 1)] -join '.' 
                     } else { 
                         'Unknown' 
                     }
@@ -116,8 +116,7 @@ function Find-ESC4 {
                                 Technique             = 'ESC4'
                             }
                         }
-                    }
-                    catch {
+                    } catch {
                         Write-Warning "Failed to process owner '$($security.Owner)' for template $templateName : $_"
                     }
                 }
@@ -133,8 +132,7 @@ function Find-ESC4 {
                                 try {
                                     $acePrincipal = New-Object System.Security.Principal.NTAccount($ace.IdentityReference)
                                     $aceSID = $acePrincipal.Translate([System.Security.Principal.SecurityIdentifier]).Value
-                                }
-                                catch {
+                                } catch {
                                     Write-Verbose "Could not translate identity $($ace.IdentityReference) to SID, skipping"
                                     continue
                                 }
@@ -172,14 +170,12 @@ function Find-ESC4 {
                                     Technique             = 'ESC4'
                                 }
                             }
-                        }
-                        catch {
+                        } catch {
                             Write-Warning "Failed to process ACE for identity $($ace.IdentityReference) on template $templateName : $_"
                         }
                     }
                 }
-            }
-            catch {
+            } catch {
                 Write-Warning "Failed to analyze security for template $templateName : $_"
             }
         }

@@ -53,7 +53,7 @@ function Find-ESC5 {
         [string[]]$SafeObjectTypes = @('0e10c968-78fb-11d2-90d4-00c04f79dc55', 'a05b8cc2-17bc-4802-a710-e7c15ab866a2')
     )
 
-    #requires -Version 5
+    #requires -Version 5 -Modules Microsoft.PowerShell.Security
 
     begin {
         Write-Verbose "Starting ESC5 object vulnerability scan"

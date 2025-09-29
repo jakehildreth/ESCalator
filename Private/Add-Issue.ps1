@@ -1,0 +1,192 @@
+function Add-Issue {
+    <#
+        .SYNOPSIS
+        Adds Issue objects as properties to DirectoryEntry objects from ADCS scans.
+
+        .DESCRIPTION
+        This function takes DirectoryEntry objects from Get-AdcsObjects and attaches security issues
+        found by Find-ESC4, Find-ESC5, and other vulnerability scanning functions as properties.
+        This enables easy filtering and reporting on vulnerable ADCS objects.
+
+        .PARAMETER AdcsObjects
+        Array of objects from Get-AdcsObjects to attach issues to. Typically DirectoryEntry objects but can accept any objects with Name and distinguishedName properties.
+
+        .PARAMETER Issues
+        Array of Issue objects from Find-ESC4, Find-ESC5, or other vulnerability scanning functions.
+
+        .PARAMETER ExpandGroups
+        Switch to expand group memberships in issues before attaching them to objects.
+
+        .INPUTS
+        Object[]
+        Objects with Name and distinguishedName properties (typically DirectoryEntry objects)
+        PSCustomObject[] (Issue objects)
+
+        .OUTPUTS
+        Object[]
+        Returns the original objects with additional issue-related properties added.
+
+        .EXAMPLE
+        $ADCSObjects = Get-AdcsObjects
+        $ESC4Issues = Find-ESC4 -AdcsObjects $ADCSObjects
+        $ESC5Issues = Find-ESC5 -AdcsObjects $ADCSObjects
+        $AllIssues = @($ESC4Issues; $ESC5Issues)
+        $ObjectsWithIssues = Add-Issue -AdcsObjects $ADCSObjects -Issues $AllIssues
+
+        .EXAMPLE
+        $ADCSObjects = Get-AdcsObjects
+        $Issues = @(Find-ESC4 -AdcsObjects $ADCSObjects; Find-ESC5 -AdcsObjects $ADCSObjects)
+        $ObjectsWithIssues = Add-Issue -AdcsObjects $ADCSObjects -Issues $Issues -ExpandGroups
+        $VulnerableObjects = $ObjectsWithIssues | Where-Object { $_.HasIssues }
+
+        .EXAMPLE
+        # Pipeline usage
+        Get-AdcsObjects | Add-Issue -Issues $AllIssues | Where-Object { $_.RiskLevel -eq "High" }
+
+        .LINK
+        https://posts.specterops.io/certified-pre-owned-d95910965cd2
+    #>
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory, ValueFromPipeline)]
+        [ValidateNotNullOrEmpty()]
+        [object[]]$AdcsObjects,
+        
+        [Parameter(Mandatory)]
+        [AllowEmptyCollection()]
+        [PSCustomObject[]]$Issues,
+        
+        [Parameter()]
+        [switch]$ExpandGroups
+    )
+
+    #requires -Version 5
+
+    begin {
+        Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Starting $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."
+        
+        # Expand groups if requested
+        if ($ExpandGroups -and $Issues) {
+            Write-Verbose "Expanding group memberships in issues..."
+            try {
+                # Load the Expand-GroupMembership function if available
+                if (-not (Get-Command Expand-GroupMembership -ErrorAction SilentlyContinue)) {
+                    $expandGroupPath = Join-Path $PSScriptRoot "Expand-GroupMembership.ps1"
+                    if (Test-Path $expandGroupPath) {
+                        . $expandGroupPath
+                    } else {
+                        Write-Warning "Expand-GroupMembership function not found. Group expansion will be skipped."
+                        $ExpandGroups = $false
+                    }
+                }
+                
+                if ($ExpandGroups) {
+                    $Issues = $Issues | Expand-GroupMembership
+                    Write-Verbose "Group expansion completed. Total issues after expansion: $($Issues.Count)"
+                }
+            } catch {
+                Write-Warning "Failed to expand group memberships: $_"
+                $ExpandGroups = $false
+            }
+        }
+        
+        Write-Verbose "Processing $($Issues.Count) total issues for attachment to ADCS objects"
+    }
+
+    process {
+        foreach ($AdcsObject in $AdcsObjects) {
+            # Handle different object types and property access patterns
+            $objectName = if ($AdcsObject.Name.Value) { 
+                $AdcsObject.Name.Value 
+            } elseif ($AdcsObject.Name) { 
+                $AdcsObject.Name 
+            } else { 
+                "Unknown" 
+            }
+            
+            $objectDN = if ($AdcsObject.distinguishedName.Value) { 
+                $AdcsObject.distinguishedName.Value 
+            } elseif ($AdcsObject.distinguishedName) { 
+                $AdcsObject.distinguishedName 
+            } else { 
+                $null 
+            }
+            
+            Write-Verbose "Processing ADCS object: $objectName"
+            
+            try {
+                # Find issues related to this object
+                $relatedIssues = $Issues | Where-Object { 
+                    $_.Name -eq $objectName -or 
+                    $_.DistinguishedName -eq $objectDN 
+                }
+                
+                Write-Verbose "Found $($relatedIssues.Count) issues for object: $objectName"
+                
+                # Group issues by technique for easier analysis
+                $issuesByTechnique = $relatedIssues | Group-Object Technique -AsHashTable -AsString
+                
+                # Calculate risk level based on issue count and techniques
+                $riskLevel = if ($relatedIssues.Count -eq 0) { 
+                    "None" 
+                } elseif ($relatedIssues.Count -le 2) { 
+                    "Low" 
+                } elseif ($relatedIssues.Count -le 5) { 
+                    "Medium" 
+                } else { 
+                    "High" 
+                }
+                
+                # Get unique techniques and affected principals
+                $techniques = $relatedIssues | Select-Object -ExpandProperty Technique -Unique
+                $affectedPrincipals = $relatedIssues | Select-Object -ExpandProperty IdentityReference -Unique
+                
+                # Add comprehensive issue information as properties
+                $AdcsObject | Add-Member -NotePropertyName "SecurityIssues" -NotePropertyValue $relatedIssues -Force
+                $AdcsObject | Add-Member -NotePropertyName "IssueCount" -NotePropertyValue $relatedIssues.Count -Force
+                $AdcsObject | Add-Member -NotePropertyName "HasIssues" -NotePropertyValue ($relatedIssues.Count -gt 0) -Force
+                $AdcsObject | Add-Member -NotePropertyName "IssuesByTechnique" -NotePropertyValue $issuesByTechnique -Force
+                $AdcsObject | Add-Member -NotePropertyName "VulnerableTechniques" -NotePropertyValue $techniques -Force
+                $AdcsObject | Add-Member -NotePropertyName "RiskLevel" -NotePropertyValue $riskLevel -Force
+                $AdcsObject | Add-Member -NotePropertyName "AffectedPrincipals" -NotePropertyValue $affectedPrincipals -Force
+                $AdcsObject | Add-Member -NotePropertyName "AffectedPrincipalCount" -NotePropertyValue $affectedPrincipals.Count -Force
+                
+                # Add convenience methods for common operations
+                $AdcsObject | Add-Member -MemberType ScriptMethod -Name "GetIssuesByTechnique" -Value {
+                    param([string]$Technique)
+                    return $this.SecurityIssues | Where-Object { $_.Technique -eq $Technique }
+                } -Force
+                
+                $AdcsObject | Add-Member -MemberType ScriptMethod -Name "GetHighRiskIssues" -Value {
+                    return $this.SecurityIssues | Where-Object { 
+                        $_.ActiveDirectoryRights -match 'GenericAll|FullControl|WriteOwner|WriteDacl' 
+                    }
+                } -Force
+                
+                $AdcsObject | Add-Member -MemberType ScriptMethod -Name "GetIssueSummary" -Value {
+                    $objName = if ($this.Name.Value) { $this.Name.Value } elseif ($this.Name) { $this.Name } else { "Unknown" }
+                    $summary = [PSCustomObject]@{
+                        ObjectName         = $objName
+                        TotalIssues        = $this.IssueCount
+                        RiskLevel          = $this.RiskLevel
+                        Techniques         = $this.VulnerableTechniques -join ', '
+                        AffectedPrincipals = $this.AffectedPrincipalCount
+                        ESC4Count          = $this.GetESC4Issues().Count
+                        ESC5Count          = $this.GetESC5Issues().Count
+                    }
+                    return $summary
+                } -Force
+                
+                Write-Output $AdcsObject
+            } catch {
+                Write-Warning "Failed to process ADCS object $objectName : $_"
+                # Still output the object even if issue attachment failed
+                Write-Output $AdcsObject
+            }
+        }
+    }
+
+    end {
+        Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Finishing $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."
+    }
+}

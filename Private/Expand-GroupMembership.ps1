@@ -78,7 +78,7 @@ function Expand-GroupMembership {
                             
                             # Get group members
                             $GroupPrincipal = [System.DirectoryServices.AccountManagement.GroupPrincipal]::FindByIdentity($PrincipalContext, 'Sid', $sid)
-                            $members = $GroupPrincipal.GetMembers($true)  # $true for recursive expansion
+                            $members = $Principal.GetMembers($true)  # $true for recursive expansion
                             
                             if ($members) {
                                 foreach ($member in $members) {

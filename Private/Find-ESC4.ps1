@@ -25,7 +25,18 @@ function Find-ESC4 {
 
         .OUTPUTS
         PSCustomObject[]
-        Returns objects describing ESC4 vulnerabilities found.
+        Returns objects describing ESC4 vulnerabilities found, including the DirectoryEntry object.
+
+        Each output object contains:
+        - Forest: Forest name where template was found
+        - Name: Certificate template name
+        - DistinguishedName: Template distinguished name
+        - IdentityReference: Principal with dangerous permissions
+        - IdentityReferenceSID: SID of the principal
+        - ActiveDirectoryRights: Specific permissions granted
+        - Issue: Description of the vulnerability
+        - Technique: Always 'ESC4'
+        - DirectoryEntry: The actual DirectoryEntry object for the template
 
         .EXAMPLE
         $ADCSObjects = Get-AdcsObjects
@@ -34,6 +45,18 @@ function Find-ESC4 {
 
         .EXAMPLE
         $Issues = Find-ESC4 -AdcsObjects $ADCSObjects | Where-Object { $_.Name -eq "User" }
+
+        .EXAMPLE
+        # Access the DirectoryEntry object for additional properties
+        $ESC4Issues = Find-ESC4 -AdcsObjects $ADCSObjects
+        $ESC4Issues[0].DirectoryEntry.Properties
+        
+        # Use DirectoryEntry for further analysis
+        $ESC4Issues | ForEach-Object {
+            Write-Host "Template: $($_.Name)"
+            Write-Host "  Object Class: $($_.DirectoryEntry.objectClass)"
+            Write-Host "  Created: $($_.DirectoryEntry.whenCreated)"
+        }
 
         .LINK
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
@@ -114,6 +137,7 @@ function Find-ESC4 {
                                 ActiveDirectoryRights = 'Owner'
                                 Issue                 = "$($security.Owner) has Owner rights on this template and can modify it into a template that can create ESC1, ESC2, and ESC3 templates."
                                 Technique             = 'ESC4'
+                                DirectoryEntry        = $Template
                             }
                         }
                     } catch {
@@ -168,6 +192,7 @@ function Find-ESC4 {
                                     ActiveDirectoryRights = $ace.ActiveDirectoryRights.ToString()
                                     Issue                 = "$($ace.IdentityReference) has been granted $($ace.ActiveDirectoryRights) rights on this template."
                                     Technique             = 'ESC4'
+                                    DirectoryEntry        = $Template
                                 }
                             }
                         } catch {

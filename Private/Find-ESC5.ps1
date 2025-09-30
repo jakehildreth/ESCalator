@@ -25,7 +25,18 @@ function Find-ESC5 {
 
         .OUTPUTS
         PSCustomObject[]
-        Returns objects describing ESC5 vulnerabilities found.
+        Returns objects describing ESC5 vulnerabilities found, including the DirectoryEntry object.
+
+        Each output object contains:
+        - Forest: Forest name where object was found
+        - Name: AD CS object name
+        - DistinguishedName: Object distinguished name
+        - IdentityReference: Principal with dangerous permissions
+        - IdentityReferenceSID: SID of the principal
+        - ActiveDirectoryRights: Specific permissions granted
+        - Issue: Description of the vulnerability
+        - Technique: Always 'ESC5'
+        - DirectoryEntry: The actual DirectoryEntry object for the AD CS object
 
         .EXAMPLE
         $ADCSObjects = Get-AdcsObjects
@@ -34,6 +45,18 @@ function Find-ESC5 {
 
         .EXAMPLE
         $Issues = Find-ESC5 -AdcsObjects $ADCSObjects | Where-Object { $_.Name -eq "User" }
+
+        .EXAMPLE
+        # Access the DirectoryEntry object for additional properties
+        $ESC5Issues = Find-ESC5 -AdcsObjects $ADCSObjects
+        $ESC5Issues[0].DirectoryEntry.Properties
+        
+        # Use DirectoryEntry for further analysis
+        $ESC5Issues | ForEach-Object {
+            Write-Host "Object: $($_.Name)"
+            Write-Host "  Object Class: $($_.DirectoryEntry.objectClass)"
+            Write-Host "  Created: $($_.DirectoryEntry.whenCreated)"
+        }
 
         .LINK
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
@@ -114,6 +137,7 @@ function Find-ESC5 {
                                 ActiveDirectoryRights = 'Owner'
                                 Issue                 = "$($security.Owner) has Owner rights on this object and can modify it into a object that can create ESC1, ESC2, and ESC3 objects."
                                 Technique             = 'ESC5'
+                                DirectoryEntry        = $Object
                             }
                         }
                     } catch {
@@ -168,6 +192,7 @@ function Find-ESC5 {
                                     ActiveDirectoryRights = $ace.ActiveDirectoryRights.ToString()
                                     Issue                 = "$($ace.IdentityReference) has been granted $($ace.ActiveDirectoryRights) rights on this object."
                                     Technique             = 'ESC5'
+                                    DirectoryEntry        = $Object
                                 }
                             }
                         } catch {

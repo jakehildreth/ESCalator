@@ -77,7 +77,7 @@ function Add-Issue {
                         . $expandGroupPath
                     } else {
                         Write-Warning "Expand-GroupMembership function not found. Using original issues only."
-                        $AllIssues = $OriginalIssues
+                        $AllIssues = $Issues
                     }
                 }
                 
@@ -89,22 +89,22 @@ function Add-Issue {
                     $AllIssues = @()
                     
                     # Add all original issues first (including groups)
-                    $AllIssues += $OriginalIssues
+                    $AllIssues += $Issues
                     
                     # Add only the expanded issues (those that came from groups)
                     $NewExpandedIssues = $ExpandedIssues | Where-Object { $_.ExpandedFromGroup }
                     $AllIssues += $NewExpandedIssues
                     
-                    Write-Verbose "Original issues: $($OriginalIssues.Count)"
+                    Write-Verbose "Original issues: $($Issues.Count)"
                     Write-Verbose "Expanded issues from groups: $($NewExpandedIssues.Count)" 
                     Write-Verbose "Total combined issues: $($AllIssues.Count)"
                 } else {
-                    $AllIssues = $OriginalIssues
+                    $AllIssues = $Issues
                 }
             }
             catch {
                 Write-Warning "Failed to expand group memberships: $_"
-                $AllIssues = $OriginalIssues
+                $AllIssues = $Issues
             }
         } else {
             $AllIssues = @()
@@ -161,15 +161,14 @@ function Add-Issue {
                 $techniques = $relatedIssues | Select-Object -ExpandProperty Technique -Unique
                 $affectedPrincipals = $relatedIssues | Select-Object -ExpandProperty IdentityReference -Unique
                 
-                # Analyze issue types - now we have original groups + expanded members + direct issues
-                $originalGroupIssues = $relatedIssues | Where-Object { 
-                    -not $_.ExpandedFromGroup -and 
+                # Analyze issue types - separate original, group, expanded, and direct issues
+                $originalIssues = $relatedIssues | Where-Object { -not $_.ExpandedFromGroup }
+                $originalGroupIssues = $originalIssues | Where-Object { 
                     $_.IdentityReferenceSID -match '^S-1-5-.*-5[0-9][0-9]$|^S-1-5-32-' 
                 } # Heuristic to identify group SIDs
                 
                 $expandedMemberIssues = $relatedIssues | Where-Object { $_.ExpandedFromGroup }
-                $directPrincipalIssues = $relatedIssues | Where-Object { 
-                    -not $_.ExpandedFromGroup -and 
+                $directPrincipalIssues = $originalIssues | Where-Object { 
                     -not ($_.IdentityReferenceSID -match '^S-1-5-.*-5[0-9][0-9]$|^S-1-5-32-')
                 }
                 

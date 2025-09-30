@@ -1,10 +1,7 @@
 function Add-Issue {
     <#
         .SYNOPSIS
-             [Parameter()]
-        [AllowEmptyCollection()]
-        [PSCustomObject[]]$Issues
-    ) Issue objects as properties to DirectoryEntry objects from ADCS scans.
+        Adds Issue objects as properties to DirectoryEntry objects from ADCS scans.
 
         .DESCRIPTION
         This function takes DirectoryEntry objects from Get-AdcsObjects and attaches security issues

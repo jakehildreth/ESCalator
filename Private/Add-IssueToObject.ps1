@@ -1,4 +1,4 @@
-function Add-Issue {
+function Add-IssueToObject {
     <#
         .SYNOPSIS
         Adds Issue objects as properties to DirectoryEntry objects from ADCS scans.

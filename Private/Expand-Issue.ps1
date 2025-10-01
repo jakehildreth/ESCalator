@@ -47,7 +47,7 @@ function Expand-Issue {
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
         [ValidateNotNullOrEmpty()]
-        [ESCalatorIssue[]]$Issue,
+        $Issue,
         
         [Parameter()]
         [bool]$Recursive = $true
@@ -77,14 +77,28 @@ function Expand-Issue {
         $FlattenedIssues = @()
         foreach ($IssueSet in $Issue) {
             if ($null -ne $IssueSet) {
+                # Check if this is a single ESCalatorIssue object
                 if ($IssueSet.PSObject.TypeNames[0] -eq 'ESCalatorIssue') {
                     $FlattenedIssues += $IssueSet
-                } elseif ($IssueSet -is [System.Array]) {
-                    foreach ($SubIssue in $IssueSet) {
-                        if ($null -ne $SubIssue -and $SubIssue.PSObject.TypeNames[0] -eq 'ESCalatorIssue') {
-                            $FlattenedIssues += $SubIssue
-                        } else {
-                            Write-Warning "Skipping non-ESCalatorIssue object in array: $($SubIssue.GetType().Name)"
+                }
+                # Check if this is an array (could be array of ESCalatorIssue or nested arrays)
+                elseif ($IssueSet -is [System.Array] -or $IssueSet -is [System.Collections.IEnumerable]) {
+                    foreach ($SubItem in $IssueSet) {
+                        if ($null -ne $SubItem) {
+                            # Recursively handle nested arrays
+                            if ($SubItem.PSObject.TypeNames[0] -eq 'ESCalatorIssue') {
+                                $FlattenedIssues += $SubItem
+                            } elseif ($SubItem -is [System.Array] -or $SubItem -is [System.Collections.IEnumerable]) {
+                                foreach ($NestedItem in $SubItem) {
+                                    if ($null -ne $NestedItem -and $NestedItem.PSObject.TypeNames[0] -eq 'ESCalatorIssue') {
+                                        $FlattenedIssues += $NestedItem
+                                    } else {
+                                        Write-Warning "Skipping non-ESCalatorIssue object in nested array: $($NestedItem.GetType().Name)"
+                                    }
+                                }
+                            } else {
+                                Write-Warning "Skipping non-ESCalatorIssue object in array: $($SubItem.GetType().Name)"
+                            }
                         }
                     }
                 } else {

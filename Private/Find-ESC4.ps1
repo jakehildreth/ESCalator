@@ -4,7 +4,7 @@ function Find-ESC4 {
         Identifies Active Directory Certificate Services (AD CS) certificate templates vulnerable to ESC4 attacks by analyzing permissions on template objects.
 
         .DESCRIPTION
-        This function analyzes Active Directory Certificate Services (ADCS) objects to identify ESC4 vulnerabilities.
+        This function analyzes Active Directory Certificate Services (AD CS) objects to identify ESC4 vulnerabilities.
         ESC4 occurs when non-administrative principals have dangerous permissions (like GenericAll, WriteProperty, 
         WriteOwner, WriteDacl) on certificate templates, allowing them to modify templates into ESC1/ESC2/ESC3 templates.
 
@@ -56,16 +56,16 @@ function Find-ESC4 {
         - WriteDacl-Template: WriteDacl rights on certificate template
 
         .EXAMPLE
-        $ADCSObjects = Get-AdcsObjects
-        $ESC4Issues = Find-ESC4 -AdcsObjects $ADCSObjects
+        $AdcsObjects = Get-AdcsObjects
+        $ESC4Issues = Find-ESC4 -AdcsObjects $AdcsObjects
         $ESC4Issues | Format-Table Name, IdentityReference, ActiveDirectoryRights
 
         .EXAMPLE
-        $Issues = Find-ESC4 -AdcsObjects $ADCSObjects | Where-Object { $_.Name -eq "User" }
+        $Issues = Find-ESC4 -AdcsObjects $AdcsObjects | Where-Object { $_.Name -eq "User" }
 
         .EXAMPLE
         # Filter for specific ESC4 subtypes
-        $ESC4Issues = Find-ESC4 -AdcsObjects $ADCSObjects
+        $ESC4Issues = Find-ESC4 -AdcsObjects $AdcsObjects
         $ESC4Issues | Format-Table Name, Subtype, IdentityReference, ActiveDirectoryRights
 
         # Find template ownership issues
@@ -80,7 +80,7 @@ function Find-ESC4 {
 
         .EXAMPLE
         # Access the DirectoryEntry object for additional properties
-        $ESC4Issues = Find-ESC4 -AdcsObjects $ADCSObjects
+        $ESC4Issues = Find-ESC4 -AdcsObjects $AdcsObjects
         $ESC4Issues[0].DirectoryEntry.Properties
         
         # Use DirectoryEntry for further analysis

@@ -6,7 +6,7 @@ function Get-IndividualPrincipals {
         .DESCRIPTION
         This function takes ESCalatorIssue objects from Find-ESC4 and Find-ESC5 and returns DirectoryEntry 
         objects for each unique individual principal (users, computers) that has been identified 
-        with permissions on ADCS objects. Supports automatic array flattening for multiple input arrays.
+        with permissions on AD CS objects. Supports automatic array flattening for multiple input arrays.
 
         .PARAMETER Issues
         Array of ESCalatorIssue objects from Find-ESC4, Find-ESC5, or other vulnerability scanning functions.
@@ -25,9 +25,9 @@ function Get-IndividualPrincipals {
         DirectoryEntry objects for each unique individual principal.
 
         .EXAMPLE
-        $ADCSObjects = Get-AdcsObjects
-        $AllIssues = @(Find-ESC4 -AdcsObjects $ADCSObjects; Find-ESC5 -AdcsObjects $ADCSObjects)
-        $ObjectsWithIssues = Add-Issue -AdcsObjects $ADCSObjects -Issues $AllIssues
+        $AdcsObjects = Get-AdcsObjects
+        $AllIssues = @(Find-ESC4 -AdcsObjects $AdcsObjects; Find-ESC5 -AdcsObjects $AdcsObjects)
+        $ObjectsWithIssues = Add-Issue -AdcsObjects $AdcsObjects -Issues $AllIssues
         $AllIndividualMemberIssues = $ObjectsWithIssues | ForEach-Object { $_.IndividualMemberIssues }
         $IndividualPrincipals = Get-IndividualPrincipals -Issues $AllIndividualMemberIssues
         $IndividualPrincipals | Select-Object Name, samAccountName, objectClass

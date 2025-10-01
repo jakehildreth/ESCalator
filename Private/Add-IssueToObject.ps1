@@ -1,7 +1,7 @@
 function Add-IssueToObject {
     <#
         .SYNOPSIS
-        Adds Issue objects as properties to DirectoryEntry objects from ADCS scans.
+        Adds Issue objects as properties to DirectoryEntry objects from AD CS scans.
 
         .DESCRIPTION
         This function takes DirectoryEntry objects from Get-AdcsObjects and attaches security issues
@@ -26,16 +26,16 @@ function Add-IssueToObject {
         Returns the original objects with additional issue-related properties added.
 
         .EXAMPLE
-        $ADCSObjects = Get-AdcsObjects
-        $ESC4Issues = Find-ESC4 -AdcsObjects $ADCSObjects
-        $ESC5Issues = Find-ESC5 -AdcsObjects $ADCSObjects
+        $AdcsObjects = Get-AdcsObjects
+        $ESC4Issues = Find-ESC4 -AdcsObjects $AdcsObjects
+        $ESC5Issues = Find-ESC5 -AdcsObjects $AdcsObjects
         $AllIssues = @($ESC4Issues; $ESC5Issues)
-        $ObjectsWithIssues = Add-Issue -AdcsObjects $ADCSObjects -Issues $AllIssues
+        $ObjectsWithIssues = Add-Issue -AdcsObjects $AdcsObjects -Issues $AllIssues
 
         .EXAMPLE
-        $ADCSObjects = Get-AdcsObjects
-        $Issues = @(Find-ESC4 -AdcsObjects $ADCSObjects; Find-ESC5 -AdcsObjects $ADCSObjects)
-        $ObjectsWithIssues = Add-Issue -AdcsObjects $ADCSObjects -Issues $Issues
+        $AdcsObjects = Get-AdcsObjects
+        $Issues = @(Find-ESC4 -AdcsObjects $AdcsObjects; Find-ESC5 -AdcsObjects $AdcsObjects)
+        $ObjectsWithIssues = Add-Issue -AdcsObjects $AdcsObjects -Issues $Issues
         $VulnerableObjects = $ObjectsWithIssues | Where-Object { $_.HasIssues }
 
         .EXAMPLE
@@ -97,7 +97,7 @@ function Add-IssueToObject {
             Write-Warning "Found $($NonESCalatorIssues.Count) non-ESCalatorIssue objects that will be ignored. Expected ESCalatorIssue objects."
         }
         
-        Write-Verbose "Processing $($AllIssues.Count) ESCalatorIssue objects for attachment to ADCS objects"
+        Write-Verbose "Processing $($AllIssues.Count) ESCalatorIssue objects for attachment to AD CS objects"
     }
 
     process {
@@ -119,7 +119,7 @@ function Add-IssueToObject {
                 $null 
             }
             
-            Write-Verbose "Processing ADCS object: $objectName"
+            Write-Verbose "Processing AD CS object: $objectName"
             
             try {
                 # Find issues related to this object
@@ -184,7 +184,7 @@ function Add-IssueToObject {
                 
                 Write-Output $AdcsObject
             } catch {
-                Write-Warning "Failed to process ADCS object $objectName : $_"
+                Write-Warning "Failed to process AD CS object $objectName : $_"
                 # Still output the object even if issue attachment failed
                 Write-Output $AdcsObject
             }

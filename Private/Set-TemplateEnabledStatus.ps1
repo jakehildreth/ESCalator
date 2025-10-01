@@ -9,7 +9,7 @@ function Set-EnabledTemplateStatus {
         whether it appears in the enabled templates list.
 
         .PARAMETER AdcsObjects
-        DirectoryEntry objects representing ADCS infrastructure objects, typically obtained from Get-AdcsObjects.
+        DirectoryEntry objects representing AD CS infrastructure objects, typically obtained from Get-AdcsObjects.
 
         .PARAMETER EnabledTemplates
         Array of template objects with Template and CertificateAuthorities properties, typically obtained from Get-EnabledTemplate.
@@ -99,7 +99,7 @@ function Set-EnabledTemplateStatus {
                 }
             }
             catch {
-                Write-Warning "Error processing ADCS object $($AdcsObject.Name): $($_.Exception.Message)"
+                Write-Warning "Error processing AD CS object $($AdcsObject.Name): $($_.Exception.Message)"
             }
         }
     }

@@ -1,7 +1,7 @@
 class ESCalatorIssue {
     <#
         .SYNOPSIS
-        Represents a security issue identified in Active Directory Certificate Services (ADCS) environments.
+        Represents a security issue identified in Active Directory Certificate Services (AD CS) environments.
 
         .DESCRIPTION
         This class provides a standardized structure for security issues found by ESCalator vulnerability

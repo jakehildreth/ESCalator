@@ -71,9 +71,31 @@ function Expand-Issue {
     }
 
     process {
-        Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Processing $($Issue.Count) issues for group expansion..."
+        Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Processing $($Issue.Count) issue(s) for group expansion..."
         
-        foreach ($IssueObject in $Issue) {
+        # Handle array flattening - support multiple array syntax like ($Array1, $Array2)
+        $FlattenedIssues = @()
+        foreach ($IssueSet in $Issue) {
+            if ($null -ne $IssueSet) {
+                if ($IssueSet.PSObject.TypeNames[0] -eq 'ESCalatorIssue') {
+                    $FlattenedIssues += $IssueSet
+                } elseif ($IssueSet -is [System.Array]) {
+                    foreach ($SubIssue in $IssueSet) {
+                        if ($null -ne $SubIssue -and $SubIssue.PSObject.TypeNames[0] -eq 'ESCalatorIssue') {
+                            $FlattenedIssues += $SubIssue
+                        } else {
+                            Write-Warning "Skipping non-ESCalatorIssue object in array: $($SubIssue.GetType().Name)"
+                        }
+                    }
+                } else {
+                    Write-Warning "Skipping non-ESCalatorIssue object: $($IssueSet.GetType().Name)"
+                }
+            }
+        }
+        
+        Write-Verbose "Processing $($FlattenedIssues.Count) flattened issues for expansion..."
+        
+        foreach ($IssueObject in $FlattenedIssues) {
             Write-Verbose "Processing issue for $($IssueObject.Name) - Identity: $($IssueObject.IdentityReference)"
             
             try {

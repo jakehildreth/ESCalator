@@ -6,7 +6,7 @@ function Add-IssueToPrincipal {
         .DESCRIPTION
         This function takes AD principal objects (DirectoryEntry or similar) and attaches 
         security issues where they are the affected principal. Unlike Add-Issue which 
-        focuses on ADCS objects, this function focuses on the principals themselves.
+        focuses on AD CS objects, this function focuses on the principals themselves.
 
         .PARAMETER Principals
         Array of AD principal objects (users, groups, computers) to attach issues to.

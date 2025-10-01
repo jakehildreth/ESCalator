@@ -12,11 +12,14 @@ function Add-IssueToPrincipal {
         Array of AD principal objects (users, groups, computers) to attach issues to.
 
         .PARAMETER Issues
-        Array of Issue objects where these principals are mentioned.
+        Array of ESCalatorIssue objects where these principals are mentioned.
+        Supports multiple arrays that will be automatically flattened.
 
         .INPUTS
         System.DirectoryServices.DirectoryEntry[]
-        PSCustomObject[] (Issue objects)
+        ESCalatorIssue[]
+        ESCalatorIssue objects from Find-ESC4, Find-ESC5, or other vulnerability scanning functions.
+        Supports multiple arrays that will be automatically flattened.
 
         .OUTPUTS
         System.DirectoryServices.DirectoryEntry[]
@@ -39,11 +42,49 @@ function Add-IssueToPrincipal {
         
         [Parameter(Mandatory)]
         [AllowEmptyCollection()]
-        [PSCustomObject[]]$Issues
+        [object[]]$Issues
     )
 
     begin {
-        Write-Verbose "Starting principal issue attachment for $($Issues.Count) issues"
+        Write-Verbose "Starting principal issue attachment..."
+        
+        # Load ESCalatorIssue class if not already loaded
+        if (-not ([System.Management.Automation.PSTypeName]'ESCalatorIssue').Type) {
+            $escalatorIssuePath = Join-Path $PSScriptRoot "ESCalatorIssue.ps1"
+            if (Test-Path $escalatorIssuePath) {
+                . $escalatorIssuePath
+            } else {
+                throw "ESCalatorIssue class not found. Please ensure ESCalatorIssue.ps1 is available."
+            }
+        }
+        
+        # Flatten any nested arrays and validate all items are ESCalatorIssue objects
+        $AllIssues = @()
+        $NonESCalatorIssues = @()
+        
+        $Issues | ForEach-Object { 
+            if ($_.PSObject.TypeNames[0] -eq 'ESCalatorIssue') { 
+                $AllIssues += $_ 
+            } elseif ($_ -is [Array]) {
+                # Recursively flatten nested arrays
+                $_ | ForEach-Object { 
+                    if ($_.PSObject.TypeNames[0] -eq 'ESCalatorIssue') { 
+                        $AllIssues += $_ 
+                    } else {
+                        $NonESCalatorIssues += $_
+                    }
+                }
+            } else {
+                $NonESCalatorIssues += $_
+            }
+        }
+        
+        # Warn about non-ESCalatorIssue objects but continue processing
+        if ($NonESCalatorIssues.Count -gt 0) {
+            Write-Warning "Found $($NonESCalatorIssues.Count) non-ESCalatorIssue objects that will be ignored. Expected ESCalatorIssue objects."
+        }
+        
+        Write-Verbose "Processing $($AllIssues.Count) ESCalatorIssue objects for principal attachment"
     }
 
     process {
@@ -65,7 +106,7 @@ function Add-IssueToPrincipal {
             }
 
             # Find issues where this principal is involved
-            $principalIssues = $Issues | Where-Object { 
+            $principalIssues = $AllIssues | Where-Object { 
                 $_.IdentityReference -eq $principalName -or 
                 $_.IdentityReferenceSID -eq $principalSID
             }

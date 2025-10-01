@@ -8,15 +8,18 @@ function Add-IssueToObject {
         found by Find-ESC4, Find-ESC5, and other vulnerability scanning functions as properties.
 
         .PARAMETER AdcsObjects
-        Array of objects from Get-AdcsObjects to attach issues to. Typically DirectoryEntry objects but can accept any objects with Name and distinguishedName properties.
+        Array of DirectoryEntry objects from Get-AdcsObjects to attach issues to.
 
         .PARAMETER Issues
-        Array of Issue objects from Find-ESC4, Find-ESC5, or other vulnerability scanning functions.
+        Array of ESCalatorIssue objects from Find-ESC4, Find-ESC5, or other vulnerability scanning functions.
+        Supports multiple arrays that will be automatically flattened.
 
         .INPUTS
-        Object[]
-        Objects with Name and distinguishedName properties (typically DirectoryEntry objects)
-        PSCustomObject[] (Issue objects)
+        System.DirectoryServices.DirectoryEntry[]
+        DirectoryEntry objects from Get-AdcsObjects
+        ESCalatorIssue[]
+        ESCalatorIssue objects from Find-ESC4, Find-ESC5, or other vulnerability scanning functions.
+        Supports multiple arrays that will be automatically flattened.
 
         .OUTPUTS
         Object[]
@@ -46,11 +49,11 @@ function Add-IssueToObject {
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
         [ValidateNotNullOrEmpty()]
-        [object[]]$AdcsObjects,
+        [System.DirectoryServices.DirectoryEntry[]]$AdcsObjects,
         
         [Parameter(Mandatory)]
         [AllowEmptyCollection()]
-        [PSCustomObject[]]$Issues
+        [object[]]$Issues
     )
 
     #requires -Version 5
@@ -58,9 +61,43 @@ function Add-IssueToObject {
     begin {
         Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Starting $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."
         
-        $AllIssues = if ($Issues) { $Issues } else { @() }
+        # Load ESCalatorIssue class if not already loaded
+        if (-not ([System.Management.Automation.PSTypeName]'ESCalatorIssue').Type) {
+            $escalatorIssuePath = Join-Path $PSScriptRoot "ESCalatorIssue.ps1"
+            if (Test-Path $escalatorIssuePath) {
+                . $escalatorIssuePath
+            } else {
+                throw "ESCalatorIssue class not found. Please ensure ESCalatorIssue.ps1 is available."
+            }
+        }
         
-        Write-Verbose "Processing $($AllIssues.Count) issues for attachment to ADCS objects"
+        # Flatten any nested arrays and validate all items are ESCalatorIssue objects
+        $AllIssues = @()
+        $NonESCalatorIssues = @()
+        
+        $Issues | ForEach-Object { 
+            if ($_.PSObject.TypeNames[0] -eq 'ESCalatorIssue') { 
+                $AllIssues += $_ 
+            } elseif ($_ -is [Array]) {
+                # Recursively flatten nested arrays
+                $_ | ForEach-Object { 
+                    if ($_.PSObject.TypeNames[0] -eq 'ESCalatorIssue') { 
+                        $AllIssues += $_ 
+                    } else {
+                        $NonESCalatorIssues += $_
+                    }
+                }
+            } else {
+                $NonESCalatorIssues += $_
+            }
+        }
+        
+        # Warn about non-ESCalatorIssue objects but continue processing
+        if ($NonESCalatorIssues.Count -gt 0) {
+            Write-Warning "Found $($NonESCalatorIssues.Count) non-ESCalatorIssue objects that will be ignored. Expected ESCalatorIssue objects."
+        }
+        
+        Write-Verbose "Processing $($AllIssues.Count) ESCalatorIssue objects for attachment to ADCS objects"
     }
 
     process {

@@ -4,19 +4,21 @@ function Get-IndividualPrincipals {
         Extracts DirectoryEntry objects for all individual principals identified in ESC4/ESC5 issues.
 
         .DESCRIPTION
-        This function takes Issue objects from Find-ESC4 and Find-ESC5 and returns DirectoryEntry 
+        This function takes ESCalatorIssue objects from Find-ESC4 and Find-ESC5 and returns DirectoryEntry 
         objects for each unique individual principal (users, computers) that has been identified 
-        with permissions on ADCS objects.
+        with permissions on ADCS objects. Supports automatic array flattening for multiple input arrays.
 
         .PARAMETER Issues
-        Array of Issue objects from Find-ESC4, Find-ESC5, or other vulnerability scanning functions.
+        Array of ESCalatorIssue objects from Find-ESC4, Find-ESC5, or other vulnerability scanning functions.
+        Supports multiple arrays that will be automatically flattened.
 
         .PARAMETER IncludeGroups
         Switch to include group principals in the output. By default, only individual users and computers are included.
 
         .INPUTS
-        PSCustomObject[]
-        Issue objects with IdentityReference and IdentityReferenceSID properties.
+        ESCalatorIssue[]
+        ESCalatorIssue objects with IdentityReference and IdentityReferenceSID properties.
+        Supports multiple arrays that will be automatically flattened.
 
         .OUTPUTS
         System.DirectoryServices.DirectoryEntry[]
@@ -41,7 +43,7 @@ function Get-IndividualPrincipals {
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
         [ValidateNotNullOrEmpty()]
-        [PSCustomObject[]]$Issues,
+        [object[]]$Issues,
         
         [Parameter()]
         [switch]$IncludeGroups
@@ -51,13 +53,49 @@ function Get-IndividualPrincipals {
 
     begin {
         Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Starting $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."
+        
+        # Load ESCalatorIssue class if not already loaded
+        if (-not ([System.Management.Automation.PSTypeName]'ESCalatorIssue').Type) {
+            $escalatorIssuePath = Join-Path $PSScriptRoot "ESCalatorIssue.ps1"
+            if (Test-Path $escalatorIssuePath) {
+                . $escalatorIssuePath
+            } else {
+                throw "ESCalatorIssue class not found. Please ensure ESCalatorIssue.ps1 is available."
+            }
+        }
+        
         $principalSIDs = @{}
+        $AllIssues = @()
+        $NonESCalatorIssues = @()
     }
 
     process {
         Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Processing $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."
         
-        foreach ($issue in $Issues) {
+        # Flatten any nested arrays and validate all items are ESCalatorIssue objects
+        $Issues | ForEach-Object { 
+            if ($_.PSObject.TypeNames[0] -eq 'ESCalatorIssue') { 
+                $AllIssues += $_ 
+            } elseif ($_ -is [Array]) {
+                # Recursively flatten nested arrays
+                $_ | ForEach-Object { 
+                    if ($_.PSObject.TypeNames[0] -eq 'ESCalatorIssue') { 
+                        $AllIssues += $_ 
+                    } else {
+                        $NonESCalatorIssues += $_
+                    }
+                }
+            } else {
+                $NonESCalatorIssues += $_
+            }
+        }
+        
+        # Warn about non-ESCalatorIssue objects but continue processing
+        if ($NonESCalatorIssues.Count -gt 0) {
+            Write-Warning "Found $($NonESCalatorIssues.Count) non-ESCalatorIssue objects that will be ignored. Expected ESCalatorIssue objects."
+        }
+        
+        foreach ($issue in $AllIssues) {
             Write-Verbose "Processing issue for principal: $($issue.IdentityReference)"
             
             try {

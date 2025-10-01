@@ -34,9 +34,23 @@ function Find-ESC4 {
         - IdentityReference: Principal with dangerous permissions
         - IdentityReferenceSID: SID of the principal
         - ActiveDirectoryRights: Specific permissions granted
+        - Subtype: Specific ESC4 vulnerability subtype
+        - ObjectType: GUID of the object type being granted permissions on
         - Issue: Description of the vulnerability
         - Technique: Always 'ESC4'
         - DirectoryEntry: The actual DirectoryEntry object for the template
+
+        ESC4 Subtypes:
+        - Owner-Template: Principal owns the certificate template
+        - GenericAll-Template: GenericAll rights on certificate template
+        - GenericWrite-Template: GenericWrite rights on certificate template
+        - WriteProperty-Template-AllObjects: WriteProperty for All Objects on template
+        - WriteProperty-Template-PKIExtendedKeyUsage: WriteProperty on pkiExtendedKeyUsage attribute
+        - WriteProperty-Template-CertNameFlag: WriteProperty on msPKI-Certificate-Name-Flag attribute
+        - WriteProperty-Template-EnrollmentFlag: WriteProperty on msPKI-Enrollment-Flag attribute
+        - WriteProperty-Template-RASignature: WriteProperty on msPKI-RA-Signature attribute
+        - WriteOwner-Template: WriteOwner rights on certificate template
+        - WriteDacl-Template: WriteDacl rights on certificate template
 
         .EXAMPLE
         $ADCSObjects = Get-AdcsObjects
@@ -47,13 +61,28 @@ function Find-ESC4 {
         $Issues = Find-ESC4 -AdcsObjects $ADCSObjects | Where-Object { $_.Name -eq "User" }
 
         .EXAMPLE
+        # Filter for specific ESC4 subtypes
+        $ESC4Issues = Find-ESC4 -AdcsObjects $ADCSObjects
+        $ESC4Issues | Format-Table Name, Subtype, IdentityReference, ActiveDirectoryRights
+
+        # Find template ownership issues
+        $OwnershipIssues = $ESC4Issues | Where-Object { $_.Subtype -eq 'Owner-Template' }
+
+        # Find critical attribute modification vulnerabilities
+        $CriticalAttrIssues = $ESC4Issues | Where-Object { 
+            $_.Subtype -like '*CertNameFlag*' -or 
+            $_.Subtype -like '*EnrollmentFlag*' -or 
+            $_.Subtype -like '*PKIExtendedKeyUsage*' 
+        }
+
+        .EXAMPLE
         # Access the DirectoryEntry object for additional properties
         $ESC4Issues = Find-ESC4 -AdcsObjects $ADCSObjects
         $ESC4Issues[0].DirectoryEntry.Properties
         
         # Use DirectoryEntry for further analysis
         $ESC4Issues | ForEach-Object {
-            Write-Host "Template: $($_.Name)"
+            Write-Host "Template: $($_.Name) [Subtype: $($_.Subtype)]"
             Write-Host "  Object Class: $($_.DirectoryEntry.objectClass)"
             Write-Host "  Created: $($_.DirectoryEntry.whenCreated)"
         }
@@ -67,13 +96,28 @@ function Find-ESC4 {
         [System.DirectoryServices.DirectoryEntry[]]$AdcsObjects,
         
         [Parameter()]
-        [string[]]$DangerousRights = @('GenericAll', 'WriteProperty', 'WriteOwner', 'WriteDacl'),
+        [string[]]$DangerousRights = @('GenericAll', 'GenericWrite', 'WriteProperty', 'WriteOwner', 'WriteDacl'),
         
         [Parameter()]
         [string]$SafeOwners = '-519$',
         
         [Parameter()]
-        [string[]]$SafeObjectTypes = @('0e10c968-78fb-11d2-90d4-00c04f79dc55', 'a05b8cc2-17bc-4802-a710-e7c15ab866a2')
+        [string[]]$SafeObjectTypes = @('0e10c968-78fb-11d2-90d4-00c04f79dc55', 'a05b8cc2-17bc-4802-a710-e7c15ab866a2'),
+        
+        [Parameter()]
+        [string]$AllObjectsGUID = '00000000-0000-0000-0000-000000000000',
+        
+        [Parameter()]
+        [string]$PKIExtendedKeyUsageGUID = 'bf967a0a-0de6-11d0-a285-00aa003049e2',
+        
+        [Parameter()]
+        [string]$MSPKICertificateNameFlagGUID = 'b7ff5a38-0818-42b0-8110-d3d154c97f24',
+        
+        [Parameter()]
+        [string]$MSPKIEnrollmentFlagGUID = 'fe17e862-1f75-4d8e-affe-2bf7cb5d3ac0',
+        
+        [Parameter()]
+        [string]$MSPKIRASignatureGUID = 'd15ef7d8-f226-46db-ae79-b34e560bd12c'
     )
 
     #requires -Version 5 -Modules Microsoft.PowerShell.Security
@@ -135,6 +179,8 @@ function Find-ESC4 {
                                 IdentityReference     = $security.Owner
                                 IdentityReferenceSID  = $ownerSID
                                 ActiveDirectoryRights = 'Owner'
+                                Subtype              = 'Owner-Template'
+                                ObjectType           = $null
                                 Issue                 = "$($security.Owner) has Owner rights on this template and can modify it into a template that can create ESC1, ESC2, and ESC3 templates."
                                 Technique             = 'ESC4'
                                 DirectoryEntry        = $Template
@@ -162,37 +208,84 @@ function Find-ESC4 {
                                 }
                             }
 
-                            # Check for dangerous conditions
-                            $hasDangerousRights = $false
-                            foreach ($right in $DangerousRights) {
-                                if ($ace.ActiveDirectoryRights -match $right) {
-                                    $hasDangerousRights = $true
-                                    break
-                                }
-                            }
-                            
                             # Check if this is a safe object type (like Enroll/AutoEnroll only)
                             $isSafeObjectType = $false
                             if ($ace.ObjectType -and $ace.ObjectType.Guid) {
                                 $isSafeObjectType = $ace.ObjectType.Guid -in $SafeObjectTypes
                             }
 
-                            if (($ace.AccessControlType -eq 'Allow') -and
-                                $hasDangerousRights -and
-                                -not $isSafeObjectType) {
+                            if (($ace.AccessControlType -eq 'Allow') -and -not $isSafeObjectType -and ($aceSID -notmatch $SafeOwners)) {
                                 
-                                Write-Verbose "Found dangerous permission: $($ace.IdentityReference) has $($ace.ActiveDirectoryRights)"
+                                $subtype = $null
+                                $objectTypeGuid = if ($ace.ObjectType) { $ace.ObjectType.Guid } else { $null }
+                                $issue = $null
+                                $includeIssue = $false
 
-                                [PSCustomObject]@{
-                                    Forest                = $forestName
-                                    Name                  = $templateName
-                                    DistinguishedName     = $templateDN
-                                    IdentityReference     = $ace.IdentityReference.Value
-                                    IdentityReferenceSID  = $aceSID
-                                    ActiveDirectoryRights = $ace.ActiveDirectoryRights.ToString()
-                                    Issue                 = "$($ace.IdentityReference) has been granted $($ace.ActiveDirectoryRights) rights on this template."
-                                    Technique             = 'ESC4'
-                                    DirectoryEntry        = $Template
+                                # Determine ESC4 subtype based on permissions and object type
+                                if ($ace.ActiveDirectoryRights -match 'GenericAll') {
+                                    $subtype = 'GenericAll-Template'
+                                    $issue = "$($ace.IdentityReference) has GenericAll rights on this certificate template, allowing complete modification of template settings to create ESC1, ESC2, and ESC3 vulnerabilities."
+                                    $includeIssue = $true
+                                }
+                                elseif ($ace.ActiveDirectoryRights -match 'GenericWrite') {
+                                    $subtype = 'GenericWrite-Template'
+                                    $issue = "$($ace.IdentityReference) has GenericWrite rights on this certificate template, allowing modification of template settings to create ESC1, ESC2, and ESC3 vulnerabilities."
+                                    $includeIssue = $true
+                                }
+                                elseif ($ace.ActiveDirectoryRights -match 'WriteProperty') {
+                                    if ($objectTypeGuid -eq $AllObjectsGUID -or $null -eq $objectTypeGuid) {
+                                        $subtype = 'WriteProperty-Template-AllObjects'
+                                        $issue = "$($ace.IdentityReference) has WriteProperty rights for All Objects on this certificate template, allowing modification of critical template settings to create ESC1, ESC2, and ESC3 vulnerabilities."
+                                        $includeIssue = $true
+                                    }
+                                    elseif ($objectTypeGuid -eq $PKIExtendedKeyUsageGUID) {
+                                        $subtype = 'WriteProperty-Template-PKIExtendedKeyUsage'
+                                        $issue = "$($ace.IdentityReference) can modify the pkiExtendedKeyUsage attribute, potentially allowing addition of Client Authentication EKU to create ESC1 vulnerabilities."
+                                        $includeIssue = $true
+                                    }
+                                    elseif ($objectTypeGuid -eq $MSPKICertificateNameFlagGUID) {
+                                        $subtype = 'WriteProperty-Template-CertNameFlag'
+                                        $issue = "$($ace.IdentityReference) can modify the msPKI-Certificate-Name-Flag attribute, potentially enabling subject name spoofing to create ESC1 vulnerabilities."
+                                        $includeIssue = $true
+                                    }
+                                    elseif ($objectTypeGuid -eq $MSPKIEnrollmentFlagGUID) {
+                                        $subtype = 'WriteProperty-Template-EnrollmentFlag'
+                                        $issue = "$($ace.IdentityReference) can modify the msPKI-Enrollment-Flag attribute, potentially disabling security features like manager approval to create ESC1 vulnerabilities."
+                                        $includeIssue = $true
+                                    }
+                                    elseif ($objectTypeGuid -eq $MSPKIRASignatureGUID) {
+                                        $subtype = 'WriteProperty-Template-RASignature'
+                                        $issue = "$($ace.IdentityReference) can modify the msPKI-RA-Signature attribute, potentially disabling registration authority signature requirements to create ESC1 vulnerabilities."
+                                        $includeIssue = $true
+                                    }
+                                }
+                                elseif ($ace.ActiveDirectoryRights -match 'WriteOwner') {
+                                    $subtype = 'WriteOwner-Template'
+                                    $issue = "$($ace.IdentityReference) has WriteOwner rights on this certificate template, allowing them to take ownership and then modify template settings to create ESC1, ESC2, and ESC3 vulnerabilities."
+                                    $includeIssue = $true
+                                }
+                                elseif ($ace.ActiveDirectoryRights -match 'WriteDacl') {
+                                    $subtype = 'WriteDacl-Template'
+                                    $issue = "$($ace.IdentityReference) has WriteDacl rights on this certificate template, allowing them to grant themselves additional permissions to modify template settings and create ESC1, ESC2, and ESC3 vulnerabilities."
+                                    $includeIssue = $true
+                                }
+
+                                if ($includeIssue -and $subtype) {
+                                    Write-Verbose "Found ESC4 issue: $subtype - $($ace.IdentityReference) on $templateName"
+
+                                    [PSCustomObject]@{
+                                        Forest                = $forestName
+                                        Name                  = $templateName
+                                        DistinguishedName     = $templateDN
+                                        IdentityReference     = $ace.IdentityReference.Value
+                                        IdentityReferenceSID  = $aceSID
+                                        ActiveDirectoryRights = $ace.ActiveDirectoryRights.ToString()
+                                        Subtype              = $subtype
+                                        ObjectType           = $objectTypeGuid
+                                        Issue                = $issue
+                                        Technique            = 'ESC4'
+                                        DirectoryEntry       = $Template
+                                    }
                                 }
                             }
                         } catch {

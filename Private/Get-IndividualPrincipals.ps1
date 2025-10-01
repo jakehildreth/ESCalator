@@ -4,13 +4,12 @@ function Get-IndividualPrincipals {
         Extracts DirectoryEntry objects for all individual principals identified in ESC4/ESC5 issues.
 
         .DESCRIPTION
-        This function takes Issue objects from Find-ESC4, Find-ESC5, or expanded from Expand-GroupMembership
-        and returns DirectoryEntry objects for each unique individual principal (users, computers) that has
-        been identified with permissions on ADCS objects.
+        This function takes Issue objects from Find-ESC4 and Find-ESC5 and returns DirectoryEntry 
+        objects for each unique individual principal (users, computers) that has been identified 
+        with permissions on ADCS objects.
 
         .PARAMETER Issues
         Array of Issue objects from Find-ESC4, Find-ESC5, or other vulnerability scanning functions.
-        Can include both original issues and expanded group membership issues.
 
         .PARAMETER IncludeGroups
         Switch to include group principals in the output. By default, only individual users and computers are included.

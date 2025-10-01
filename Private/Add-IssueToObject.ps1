@@ -6,15 +6,12 @@ function Add-IssueToObject {
         .DESCRIPTION
         This function takes DirectoryEntry objects from Get-AdcsObjects and attaches security issues
         found by Find-ESC4, Find-ESC5, and other vulnerability scanning functions as properties.
-        The function automatically expands group memberships while keeping both the original group 
-        issues and the expanded individual member issues for comprehensive analysis.
 
         .PARAMETER AdcsObjects
         Array of objects from Get-AdcsObjects to attach issues to. Typically DirectoryEntry objects but can accept any objects with Name and distinguishedName properties.
 
         .PARAMETER Issues
         Array of Issue objects from Find-ESC4, Find-ESC5, or other vulnerability scanning functions.
-        Group memberships will be automatically expanded while keeping original group issues.
 
         .INPUTS
         Object[]
@@ -37,10 +34,9 @@ function Add-IssueToObject {
         $Issues = @(Find-ESC4 -AdcsObjects $ADCSObjects; Find-ESC5 -AdcsObjects $ADCSObjects)
         $ObjectsWithIssues = Add-Issue -AdcsObjects $ADCSObjects -Issues $Issues
         $VulnerableObjects = $ObjectsWithIssues | Where-Object { $_.HasIssues }
-        # Groups are automatically expanded, so you get both group and individual member issues
 
         .EXAMPLE
-        # Pipeline usage - automatic group expansion
+        # Pipeline usage
         Get-AdcsObjects | Add-Issue -Issues $AllIssues | Where-Object { $_.RiskLevel -eq "High" }
 
         .LINK
@@ -62,55 +58,9 @@ function Add-IssueToObject {
     begin {
         Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Starting $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."
         
-        # Always expand groups but keep both original and expanded issues
-
-        $ExpandedIssues = @()
-        $AllIssues = @()
+        $AllIssues = if ($Issues) { $Issues } else { @() }
         
-        if ($Issues) {
-            Write-Verbose "Expanding group memberships in issues (keeping both original and expanded)..."
-            try {
-                # Load the Expand-GroupMembership function if available
-                if (-not (Get-Command Expand-GroupMembership -ErrorAction SilentlyContinue)) {
-                    $expandGroupPath = Join-Path $PSScriptRoot "Expand-GroupMembership.ps1"
-                    if (Test-Path $expandGroupPath) {
-                        . $expandGroupPath
-                    } else {
-                        Write-Warning "Expand-GroupMembership function not found. Using original issues only."
-                        $AllIssues = $Issues
-                    }
-                }
-                
-                if (Get-Command Expand-GroupMembership -ErrorAction SilentlyContinue) {
-                    # Expand the issues
-                    $ExpandedIssues = $Issues | Expand-GroupMembership
-                    
-                    # Combine original and expanded issues, avoiding duplicates of non-group issues
-                    $AllIssues = @()
-                    
-                    # Add all original issues first (including groups)
-                    $AllIssues += $Issues
-                    
-                    # Add only the expanded issues (those that came from groups)
-                    $NewExpandedIssues = $ExpandedIssues | Where-Object { $_.ExpandedFromGroup }
-                    $AllIssues += $NewExpandedIssues
-                    
-                    Write-Verbose "Original issues: $($Issues.Count)"
-                    Write-Verbose "Expanded issues from groups: $($NewExpandedIssues.Count)" 
-                    Write-Verbose "Total combined issues: $($AllIssues.Count)"
-                } else {
-                    $AllIssues = $Issues
-                }
-            }
-            catch {
-                Write-Warning "Failed to expand group memberships: $_"
-                $AllIssues = $Issues
-            }
-        } else {
-            $AllIssues = @()
-        }
-        
-        Write-Verbose "Processing $($AllIssues.Count) total issues (original + expanded) for attachment to ADCS objects"
+        Write-Verbose "Processing $($AllIssues.Count) issues for attachment to ADCS objects"
     }
 
     process {
@@ -161,20 +111,6 @@ function Add-IssueToObject {
                 $techniques = $relatedIssues | Select-Object -ExpandProperty Technique -Unique
                 $affectedPrincipals = $relatedIssues | Select-Object -ExpandProperty IdentityReference -Unique
                 
-                # Analyze issue types - separate original, group, expanded, and direct issues
-                $originalIssues = $relatedIssues | Where-Object { -not $_.ExpandedFromGroup }
-                $originalGroupIssues = $originalIssues | Where-Object { 
-                    $_.IdentityReferenceSID -match '^S-1-5-.*-5[0-9][0-9]$|^S-1-5-32-' 
-                } # Heuristic to identify group SIDs
-                
-                $expandedMemberIssues = $relatedIssues | Where-Object { $_.ExpandedFromGroup }
-                $directPrincipalIssues = $originalIssues | Where-Object { 
-                    -not ($_.IdentityReferenceSID -match '^S-1-5-.*-5[0-9][0-9]$|^S-1-5-32-')
-                }
-                
-                $expandedFromGroups = $expandedMemberIssues | Select-Object -ExpandProperty ExpandedFromGroup -Unique
-                $memberTypes = $expandedMemberIssues | Where-Object { $_.MemberType } | Select-Object -ExpandProperty MemberType -Unique
-                
                 # Add comprehensive issue information as properties
                 $AdcsObject | Add-Member -NotePropertyName "SecurityIssues" -NotePropertyValue $relatedIssues -Force
                 $AdcsObject | Add-Member -NotePropertyName "IssueCount" -NotePropertyValue $relatedIssues.Count -Force
@@ -184,19 +120,6 @@ function Add-IssueToObject {
                 $AdcsObject | Add-Member -NotePropertyName "RiskLevel" -NotePropertyValue $riskLevel -Force
                 $AdcsObject | Add-Member -NotePropertyName "AffectedPrincipals" -NotePropertyValue $affectedPrincipals -Force
                 $AdcsObject | Add-Member -NotePropertyName "AffectedPrincipalCount" -NotePropertyValue $affectedPrincipals.Count -Force
-                
-                # Add enhanced group expansion analysis properties
-                $AdcsObject | Add-Member -NotePropertyName "OriginalIssues" -NotePropertyValue $originalIssues -Force
-                $AdcsObject | Add-Member -NotePropertyName "GroupIssues" -NotePropertyValue $originalGroupIssues -Force
-                $AdcsObject | Add-Member -NotePropertyName "IndividualMemberIssues" -NotePropertyValue $expandedMemberIssues -Force
-                $AdcsObject | Add-Member -NotePropertyName "NonGroupIssues" -NotePropertyValue $directPrincipalIssues -Force
-                $AdcsObject | Add-Member -NotePropertyName "ExpandedFromGroups" -NotePropertyValue $expandedFromGroups -Force
-                $AdcsObject | Add-Member -NotePropertyName "MemberTypes" -NotePropertyValue $memberTypes -Force
-                $AdcsObject | Add-Member -NotePropertyName "OriginalIssueCount" -NotePropertyValue $originalIssues.Count -Force
-                $AdcsObject | Add-Member -NotePropertyName "GroupIssueCount" -NotePropertyValue $originalGroupIssues.Count -Force
-                $AdcsObject | Add-Member -NotePropertyName "IndividualMemberIssueCount" -NotePropertyValue $expandedMemberIssues.Count -Force
-                $AdcsObject | Add-Member -NotePropertyName "NonGroupIssueCount" -NotePropertyValue $directPrincipalIssues.Count -Force
-                $AdcsObject | Add-Member -NotePropertyName "GroupCount" -NotePropertyValue $expandedFromGroups.Count -Force
                 
                 # Add convenience methods for common operations
                 $AdcsObject | Add-Member -MemberType ScriptMethod -Name "GetIssuesByTechnique" -Value {
@@ -210,32 +133,14 @@ function Add-IssueToObject {
                     }
                 } -Force
                 
-                $AdcsObject | Add-Member -MemberType ScriptMethod -Name "GetGroupExpansionSummary" -Value {
-                    $summary = [PSCustomObject]@{
-                        TotalIssues = $this.IssueCount
-                        OriginalGroups = $this.OriginalGroupCount
-                        ExpandedMembers = $this.ExpandedMemberCount
-                        DirectPrincipals = $this.DirectPrincipalCount
-                        GroupsInvolved = $this.GroupCount
-                        MemberTypes = $this.MemberTypes -join ', '
-                        ExpandedFromGroups = $this.ExpandedFromGroups -join ', '
-                    }
-                    return $summary
-                } -Force
-                
                 $AdcsObject | Add-Member -MemberType ScriptMethod -Name "GetIssueSummary" -Value {
                     $objName = if ($this.Name.Value) { $this.Name.Value } elseif ($this.Name) { $this.Name } else { "Unknown" }
                     $summary = [PSCustomObject]@{
-                        ObjectName               = $objName
-                        TotalIssues              = $this.IssueCount
-                        OriginalIssues           = $this.OriginalIssueCount
-                        GroupIssues              = $this.GroupIssueCount
-                        IndividualMemberIssues   = $this.IndividualMemberIssueCount
-                        NonGroupIssues           = $this.NonGroupIssueCount
-                        RiskLevel                = $this.RiskLevel
-                        Techniques               = $this.VulnerableTechniques -join ', '
-                        AffectedPrincipals       = $this.AffectedPrincipalCount
-                        GroupsInvolved           = $this.GroupCount
+                        ObjectName          = $objName
+                        TotalIssues         = $this.IssueCount
+                        RiskLevel           = $this.RiskLevel
+                        Techniques          = $this.VulnerableTechniques -join ', '
+                        AffectedPrincipals  = $this.AffectedPrincipalCount
                     }
                     return $summary
                 } -Force

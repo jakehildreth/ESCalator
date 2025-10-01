@@ -5,8 +5,8 @@ class ESCalatorIssue {
 
         .DESCRIPTION
         This class provides a standardized structure for security issues found by ESCalator vulnerability
-        scanning functions like Find-ESC4, Find-ESC5, and Expand-GroupMembership. All Issue objects
-        share the same properties and methods for consistent analysis and processing.
+        scanning functions like Find-ESC4 and Find-ESC5. All Issue objects share the same properties 
+        and methods for consistent analysis and processing.
 
         .NOTES
         This class is used internally by ESCalator functions to ensure consistent Issue object structure.
@@ -65,7 +65,7 @@ class ESCalatorIssue {
         $this.MemberType = $null
     }
 
-    # Constructor for expanded issues (from Expand-GroupMembership)
+    # Constructor for expanded issues (from group membership expansion)
     ESCalatorIssue(
         [string]$Forest,
         [string]$Name,

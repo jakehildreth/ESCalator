@@ -34,17 +34,23 @@ function Find-ESC5 {
         - IdentityReference: Principal with dangerous permissions
         - IdentityReferenceSID: SID of the principal
         - ActiveDirectoryRights: Specific permissions granted
-        - Issue: Detailed description of the vulnerability
-        - Technique: Always 'ESC5'
         - Subtype: Specific ESC5 subtype classification
         - ObjectType: GUID of the object type being granted permissions on (if applicable)
+        - ExpandedFromGroup: Group this principal was expanded from (null for original issues)
+        - ExpandedFromGroupSID: SID of the group this principal was expanded from (null for original issues)
+        - MemberType: Type of expanded member (null for original issues)
+        - Issue: Detailed description of the vulnerability
+        - Technique: Always 'ESC5'
         - DirectoryEntry: The actual DirectoryEntry object for the AD CS object
 
         ESC5 Subtypes:
+        - Owner-Object: Principal owns the AD CS object
         - CreateChild-CertTemplates-GenericAll: GenericAll on Certificate Templates container
+        - CreateChild-CertTemplates-GenericWrite: GenericWrite on Certificate Templates container
         - CreateChild-CertTemplates-AllObjects: CreateChild for All Objects on Certificate Templates container  
         - CreateChild-CertTemplates-PKICertTemplate: CreateChild for pKICertificateTemplate objects
         - WriteProperty-EnrollmentService-GenericAll: GenericAll on pKIEnrollmentService objects
+        - WriteProperty-EnrollmentService-GenericWrite: GenericWrite on pKIEnrollmentService objects
         - WriteProperty-EnrollmentService-AllObjects: WriteProperty for All Objects on pKIEnrollmentService
         - WriteProperty-EnrollmentService-CertTemplatesAttr: WriteProperty on certificateTemplates attribute
         - General: Other dangerous permissions on ADCS objects
@@ -83,7 +89,7 @@ function Find-ESC5 {
         [System.DirectoryServices.DirectoryEntry[]]$AdcsObjects,
         
         [Parameter()]
-        [string[]]$DangerousRights = @('GenericAll', 'WriteProperty', 'WriteOwner', 'WriteDacl', 'CreateChild'),
+        [string[]]$DangerousRights = @('GenericAll', 'GenericWrite', 'WriteProperty', 'WriteOwner', 'WriteDacl', 'CreateChild'),
         
         [Parameter()]
         [string]$SafeOwners = '-519$',
@@ -101,6 +107,9 @@ function Find-ESC5 {
     #requires -Version 5 -Modules Microsoft.PowerShell.Security
 
     begin {
+        # Load the ESCalatorIssue class
+        . "$PSScriptRoot\ESCalatorIssue.ps1"
+        
         Write-Verbose "Starting ESC5 object vulnerability scan"
         Write-Verbose "Dangerous Rights: $($DangerousRights -join ', ')"
         Write-Verbose "Safe Owners Pattern: $SafeOwners"
@@ -150,17 +159,19 @@ function Find-ESC5 {
                         if ($ownerSID -notmatch $SafeOwners) {
                             Write-Verbose "Found dangerous owner: $($security.Owner)"
                             
-                            [PSCustomObject]@{
-                                Forest                = $forestName
-                                Name                  = $ObjectName
-                                DistinguishedName     = $ObjectDN
-                                IdentityReference     = $security.Owner
-                                IdentityReferenceSID  = $ownerSID
-                                ActiveDirectoryRights = 'Owner'
-                                Issue                 = "$($security.Owner) has Owner rights on this object and can modify it into a object that can create ESC1, ESC2, and ESC3 objects."
-                                Technique             = 'ESC5'
-                                DirectoryEntry        = $Object
-                            }
+                            [ESCalatorIssue]::CreateOriginalIssue(
+                                $forestName,                                    # Forest
+                                $ObjectName,                                    # Name
+                                $ObjectDN,                                      # DistinguishedName
+                                $security.Owner,                                # IdentityReference
+                                $ownerSID,                                      # IdentityReferenceSID
+                                'Owner',                                        # ActiveDirectoryRights
+                                'ESC5',                                         # Technique
+                                'Owner-Object',                                 # Subtype
+                                "$($security.Owner) has Owner rights on this object and can modify it into a object that can create ESC1, ESC2, and ESC3 objects.", # Issue
+                                $null,                                          # ObjectType
+                                $Object                                         # DirectoryEntry
+                            )
                         }
                     } catch {
                         Write-Warning "Failed to process owner '$($security.Owner)' for object $ObjectName : $_"
@@ -211,11 +222,14 @@ function Find-ESC5 {
                                 
                                 # ESC5 Subtype 1: CreateChild on Certificate Templates container
                                 if ($Object.Name.Value -eq "Certificate Templates" -and 
-                                    ($ace.ActiveDirectoryRights -match 'CreateChild' -or $ace.ActiveDirectoryRights -match 'GenericAll')) {
+                                    ($ace.ActiveDirectoryRights -match 'CreateChild' -or $ace.ActiveDirectoryRights -match 'GenericAll' -or $ace.ActiveDirectoryRights -match 'GenericWrite')) {
                                     
                                     if ($ace.ActiveDirectoryRights -match 'GenericAll') {
                                         $subtype = "CreateChild-CertTemplates-GenericAll"
                                         $detailedIssue = "$($ace.IdentityReference) has GenericAll rights on the Certificate Templates container, allowing them to create new certificate templates."
+                                    } elseif ($ace.ActiveDirectoryRights -match 'GenericWrite') {
+                                        $subtype = "CreateChild-CertTemplates-GenericWrite"
+                                        $detailedIssue = "$($ace.IdentityReference) has GenericWrite rights on the Certificate Templates container, allowing them to create new certificate templates."
                                     } elseif (-not $ace.ObjectType -or $ace.ObjectType.Guid -eq '00000000-0000-0000-0000-000000000000') {
                                         $subtype = "CreateChild-CertTemplates-AllObjects"  
                                         $detailedIssue = "$($ace.IdentityReference) has CreateChild rights for All Objects on the Certificate Templates container, allowing them to create new certificate templates."
@@ -227,11 +241,14 @@ function Find-ESC5 {
                                 
                                 # ESC5 Subtype 2: WriteProperty on certificateTemplates attribute of pKIEnrollmentService
                                 elseif ($Object.objectClass -contains 'pKIEnrollmentService' -and 
-                                        ($ace.ActiveDirectoryRights -match 'WriteProperty' -or $ace.ActiveDirectoryRights -match 'GenericAll')) {
+                                        ($ace.ActiveDirectoryRights -match 'WriteProperty' -or $ace.ActiveDirectoryRights -match 'GenericAll' -or $ace.ActiveDirectoryRights -match 'GenericWrite')) {
                                     
                                     if ($ace.ActiveDirectoryRights -match 'GenericAll') {
                                         $subtype = "WriteProperty-EnrollmentService-GenericAll"
                                         $detailedIssue = "$($ace.IdentityReference) has GenericAll rights on the pKIEnrollmentService object '$ObjectName', allowing them to modify the certificateTemplates attribute and control which templates are published."
+                                    } elseif ($ace.ActiveDirectoryRights -match 'GenericWrite') {
+                                        $subtype = "WriteProperty-EnrollmentService-GenericWrite"
+                                        $detailedIssue = "$($ace.IdentityReference) has GenericWrite rights on the pKIEnrollmentService object '$ObjectName', allowing them to modify the certificateTemplates attribute and control which templates are published."
                                     } elseif (-not $ace.ObjectType -or $ace.ObjectType.Guid -eq '00000000-0000-0000-0000-000000000000') {
                                         $subtype = "WriteProperty-EnrollmentService-AllObjects"
                                         $detailedIssue = "$($ace.IdentityReference) has WriteProperty rights for All Objects on the pKIEnrollmentService object '$ObjectName', allowing them to modify the certificateTemplates attribute and control which templates are published."
@@ -241,19 +258,22 @@ function Find-ESC5 {
                                     }
                                 }
 
-                                [PSCustomObject]@{
-                                    Forest                = $forestName
-                                    Name                  = $ObjectName
-                                    DistinguishedName     = $ObjectDN
-                                    IdentityReference     = $ace.IdentityReference.Value
-                                    IdentityReferenceSID  = $aceSID
-                                    ActiveDirectoryRights = $ace.ActiveDirectoryRights.ToString()
-                                    Issue                 = $detailedIssue
-                                    Technique             = 'ESC5'
-                                    Subtype               = $subtype
-                                    ObjectType            = if ($ace.ObjectType) { $ace.ObjectType.Guid } else { $null }
-                                    DirectoryEntry        = $Object
-                                }
+                                # Determine ObjectType
+                                $objectTypeGuid = if ($ace.ObjectType) { $ace.ObjectType.Guid } else { $null }
+
+                                [ESCalatorIssue]::CreateOriginalIssue(
+                                    $forestName,                            # Forest
+                                    $ObjectName,                            # Name
+                                    $ObjectDN,                              # DistinguishedName
+                                    $ace.IdentityReference.Value,           # IdentityReference
+                                    $aceSID,                                # IdentityReferenceSID
+                                    $ace.ActiveDirectoryRights.ToString(), # ActiveDirectoryRights
+                                    'ESC5',                                 # Technique
+                                    $subtype,                               # Subtype
+                                    $detailedIssue,                         # Issue
+                                    $objectTypeGuid,                        # ObjectType
+                                    $Object                                 # DirectoryEntry
+                                )
                             }
                         } catch {
                             Write-Warning "Failed to process ACE for identity $($ace.IdentityReference) on object $ObjectName : $_"

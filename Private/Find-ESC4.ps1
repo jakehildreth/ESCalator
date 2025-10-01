@@ -36,6 +36,9 @@ function Find-ESC4 {
         - ActiveDirectoryRights: Specific permissions granted
         - Subtype: Specific ESC4 vulnerability subtype
         - ObjectType: GUID of the object type being granted permissions on
+        - ExpandedFromGroup: Group this principal was expanded from (null for original issues)
+        - ExpandedFromGroupSID: SID of the group this principal was expanded from (null for original issues)
+        - MemberType: Type of expanded member (null for original issues)
         - Issue: Description of the vulnerability
         - Technique: Always 'ESC4'
         - DirectoryEntry: The actual DirectoryEntry object for the template
@@ -123,6 +126,9 @@ function Find-ESC4 {
     #requires -Version 5 -Modules Microsoft.PowerShell.Security
 
     begin {
+        # Load the ESCalatorIssue class
+        . "$PSScriptRoot\ESCalatorIssue.ps1"
+        
         Write-Verbose "Starting ESC4 template vulnerability scan"
         Write-Verbose "Dangerous Rights: $($DangerousRights -join ', ')"
         Write-Verbose "Safe Owners Pattern: $SafeOwners"
@@ -172,19 +178,19 @@ function Find-ESC4 {
                         if ($ownerSID -notmatch $SafeOwners) {
                             Write-Verbose "Found dangerous owner: $($security.Owner)"
                             
-                            [PSCustomObject]@{
-                                Forest                = $forestName
-                                Name                  = $templateName
-                                DistinguishedName     = $templateDN
-                                IdentityReference     = $security.Owner
-                                IdentityReferenceSID  = $ownerSID
-                                ActiveDirectoryRights = 'Owner'
-                                Subtype              = 'Owner-Template'
-                                ObjectType           = $null
-                                Issue                 = "$($security.Owner) has Owner rights on this template and can modify it into a template that can create ESC1, ESC2, and ESC3 templates."
-                                Technique             = 'ESC4'
-                                DirectoryEntry        = $Template
-                            }
+                            [ESCalatorIssue]::CreateOriginalIssue(
+                                $forestName,                                    # Forest
+                                $templateName,                                  # Name
+                                $templateDN,                                    # DistinguishedName
+                                $security.Owner,                                # IdentityReference
+                                $ownerSID,                                      # IdentityReferenceSID
+                                'Owner',                                        # ActiveDirectoryRights
+                                'ESC4',                                         # Technique
+                                'Owner-Template',                               # Subtype
+                                "$($security.Owner) has Owner rights on this template and can modify it into a template that can create ESC1, ESC2, and ESC3 templates.", # Issue
+                                $null,                                          # ObjectType
+                                $Template                                       # DirectoryEntry
+                            )
                         }
                     } catch {
                         Write-Warning "Failed to process owner '$($security.Owner)' for template $templateName : $_"
@@ -273,19 +279,19 @@ function Find-ESC4 {
                                 if ($includeIssue -and $subtype) {
                                     Write-Verbose "Found ESC4 issue: $subtype - $($ace.IdentityReference) on $templateName"
 
-                                    [PSCustomObject]@{
-                                        Forest                = $forestName
-                                        Name                  = $templateName
-                                        DistinguishedName     = $templateDN
-                                        IdentityReference     = $ace.IdentityReference.Value
-                                        IdentityReferenceSID  = $aceSID
-                                        ActiveDirectoryRights = $ace.ActiveDirectoryRights.ToString()
-                                        Subtype              = $subtype
-                                        ObjectType           = $objectTypeGuid
-                                        Issue                = $issue
-                                        Technique            = 'ESC4'
-                                        DirectoryEntry       = $Template
-                                    }
+                                    [ESCalatorIssue]::CreateOriginalIssue(
+                                        $forestName,                            # Forest
+                                        $templateName,                          # Name
+                                        $templateDN,                            # DistinguishedName
+                                        $ace.IdentityReference.Value,           # IdentityReference
+                                        $aceSID,                                # IdentityReferenceSID
+                                        $ace.ActiveDirectoryRights.ToString(), # ActiveDirectoryRights
+                                        'ESC4',                                 # Technique
+                                        $subtype,                               # Subtype
+                                        $issue,                                 # Issue
+                                        $objectTypeGuid,                        # ObjectType
+                                        $Template                               # DirectoryEntry
+                                    )
                                 }
                             }
                         } catch {

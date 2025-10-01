@@ -5,7 +5,7 @@ Get-ChildItem "$PSScriptRoot\Private" | ForEach-Object { . $_ }
 $AdcsObjects = Get-AdcsObjects
 
 # Get all issues with AD CS objects
-$OriginalIssues = @(Find-ESC4 -AdcsObjects $ADCSObjects; Find-ESC5 -AdcsObjects $ADCSObjects)
+$OriginalIssues = @(Find-ESC4 -AdcsObjects $AdcsObjects; Find-ESC5 -AdcsObjects $AdcsObjects)
 
 # Expand group ESCalatorIssue objects into individual principal ESCalatorIssue objects.
 $ExpandedIssues = $OriginalIssues | Expand-Issue

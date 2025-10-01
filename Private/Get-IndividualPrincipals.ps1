@@ -6,7 +6,8 @@ function Get-IndividualPrincipals {
         .DESCRIPTION
         This function takes ESCalatorIssue objects from Find-ESC4 and Find-ESC5 and returns DirectoryEntry 
         objects for each unique individual principal (users, computers) that has been identified 
-        with permissions on AD CS objects. Supports automatic array flattening for multiple input arrays.
+        with permissions on AD CS objects. For well-known security principals that don't exist in Active Directory
+        (like SYSTEM), it creates mock DirectoryEntry objects with appropriate properties. Supports automatic array flattening for multiple input arrays.
 
         .PARAMETER Issues
         Array of ESCalatorIssue objects from Find-ESC4, Find-ESC5, or other vulnerability scanning functions.
@@ -22,7 +23,8 @@ function Get-IndividualPrincipals {
 
         .OUTPUTS
         System.DirectoryServices.DirectoryEntry[]
-        DirectoryEntry objects for each unique individual principal.
+        DirectoryEntry objects for each unique individual principal. For well-known security principals
+        that don't exist in Active Directory, returns mock DirectoryEntry objects with TypeName 'MockDirectoryEntry'.
 
         .EXAMPLE
         $AdcsObjects = Get-AdcsObjects
@@ -137,7 +139,89 @@ function Get-IndividualPrincipals {
                     $directoryEntries += $directoryEntry
                     Write-Verbose "Successfully created DirectoryEntry for: $($directoryEntry.Name)"
                 } else {
-                    Write-Warning "Could not find AD object for SID: $sid ($($principalSIDs[$sid]))"
+                    Write-Verbose "Could not find AD object for SID: $sid ($($principalSIDs[$sid])). Trying well-known security principal paths."
+                    
+                    # Dynamically enumerate well-known security principals from AD
+                    try {
+                        # Get the root DSE to find the configuration naming context
+                        $rootDSE = New-Object System.DirectoryServices.DirectoryEntry("LDAP://RootDSE")
+                        $configNC = $rootDSE.Properties['configurationNamingContext'][0]
+                        
+                        # Search the WellKnown Security Principals container
+                        $wellKnownPath = "LDAP://CN=WellKnown Security Principals,$configNC"
+                        Write-Verbose "Searching well-known security principals in: $wellKnownPath"
+                        
+                        $wellKnownSearcher = New-Object System.DirectoryServices.DirectorySearcher
+                        $wellKnownSearcher.SearchRoot = New-Object System.DirectoryServices.DirectoryEntry($wellKnownPath)
+                        $wellKnownSearcher.Filter = "(objectClass=foreignSecurityPrincipal)"
+                        $wellKnownSearcher.PropertiesToLoad.AddRange(@('distinguishedName', 'objectSid', 'name'))
+                        
+                        $wellKnownResults = $wellKnownSearcher.FindAll()
+                        
+                        $foundWellKnownPrincipal = $false
+                        foreach ($wellKnownResult in $wellKnownResults) {
+                            try {
+                                $wellKnownSidBytes = $wellKnownResult.Properties['objectsid'][0]
+                                $wellKnownSid = New-Object System.Security.Principal.SecurityIdentifier($wellKnownSidBytes, 0)
+                                
+                                if ($wellKnownSid.Value -eq $sid) {
+                                    $wellKnownDN = $wellKnownResult.Properties['distinguishedname'][0]
+                                    Write-Verbose "Found matching well-known principal: $wellKnownDN"
+                                    
+                                    $directoryEntry = New-Object System.DirectoryServices.DirectoryEntry("LDAP://$wellKnownDN")
+                                    
+                                    # Verify this is the correct object by checking if we can access its properties
+                                    $null = $directoryEntry.Properties.Count
+                                    
+                                    $directoryEntries += $directoryEntry
+                                    Write-Verbose "Successfully created DirectoryEntry for well-known principal: $($principalSIDs[$sid])"
+                                    $foundWellKnownPrincipal = $true
+                                    break
+                                }
+                            } catch {
+                                Write-Verbose "Error processing well-known principal result: $_"
+                                continue
+                            }
+                        }
+                        
+                        if (-not $foundWellKnownPrincipal) {
+                            throw "No matching well-known principal found for SID $sid"
+                        }
+                        
+                    } catch {
+                        Write-Verbose "Failed to find well-known principal for $sid ($($principalSIDs[$sid])): $_"
+                        Write-Verbose "Creating mock DirectoryEntry instead."
+                        
+                        # Fallback to creating a mock object
+                        $mockEntry = New-Object PSObject
+                        
+                        # Add properties that mimic a real DirectoryEntry
+                        $mockEntry | Add-Member -MemberType NoteProperty -Name "Name" -Value $principalSIDs[$sid]
+                        $mockEntry | Add-Member -MemberType NoteProperty -Name "samAccountName" -Value $principalSIDs[$sid]
+                        $mockEntry | Add-Member -MemberType NoteProperty -Name "distinguishedName" -Value "CN=$($principalSIDs[$sid]),CN=WellKnownSecurityPrincipals,CN=Configuration"
+                        $mockEntry | Add-Member -MemberType NoteProperty -Name "objectClass" -Value @('top', 'foreignSecurityPrincipal')
+                        $mockEntry | Add-Member -MemberType NoteProperty -Name "objectSid" -Value $sid
+                        $mockEntry | Add-Member -MemberType NoteProperty -Name "Path" -Value "LDAP://CN=$($principalSIDs[$sid]),CN=WellKnownSecurityPrincipals,CN=Configuration"
+                        $mockEntry | Add-Member -MemberType NoteProperty -Name "IsMock" -Value $true -Force
+                        
+                        # Create Properties collection that mimics real DirectoryEntry.Properties
+                        $propertiesCollection = @{
+                            'name' = @($principalSIDs[$sid])
+                            'samaccountname' = @($principalSIDs[$sid])
+                            'distinguishedname' = @("CN=$($principalSIDs[$sid]),CN=WellKnownSecurityPrincipals,CN=Configuration")
+                            'objectclass' = @('top', 'foreignSecurityPrincipal')
+                            'objectsid' = @($sid)
+                        }
+                        $mockEntry | Add-Member -MemberType NoteProperty -Name "Properties" -Value $propertiesCollection
+                        
+                        # Set the type name to make it appear as close to a DirectoryEntry as possible
+                        $mockEntry.PSObject.TypeNames.Clear()
+                        $mockEntry.PSObject.TypeNames.Add('System.DirectoryServices.DirectoryEntry')
+                        $mockEntry.PSObject.TypeNames.Add('MockDirectoryEntry')
+                        
+                        $directoryEntries += $mockEntry
+                        Write-Verbose "Successfully created mock DirectoryEntry for: $($principalSIDs[$sid])"
+                    }
                 }
                 
             } catch {

@@ -18,6 +18,7 @@ function Start-ESCalator {
         .LINK
     #>
     [CmdletBinding()]
+    [Alias('ESCalator')]
     param (
     )
 
@@ -25,17 +26,24 @@ function Start-ESCalator {
 
     do {
         Write-Host ""
-        Write-Host "`e[38;5;90m░        ░░░      ░░░░      ░░░░      ░░░  ░░░░░░░░░      ░░░        ░░░      ░░░       ░░`e[0m"
-        Write-Host "`e[38;5;126m▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒▒▒▒  ▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒`e[0m"
-        Write-Host "`e[38;5;162m▓      ▓▓▓▓▓      ▓▓▓  ▓▓▓▓▓▓▓▓  ▓▓▓▓  ▓▓  ▓▓▓▓▓▓▓▓  ▓▓▓▓  ▓▓▓▓▓  ▓▓▓▓▓  ▓▓▓▓  ▓▓       ▓▓`e[0m"
-        Write-Host "`e[38;5;198m█  ██████████████  ██  ████  ██        ██  ████████        █████  █████  ████  ██  ███  ██`e[0m"
-        Write-Host "`e[38;5;203m█        ███      ████      ███  ████  ██        ██  ████  █████  ██████      ███  ████  █`e[0m"
+        Write-Host "╔══════════════════════════════════════════════════════════════════════════════════════════╗" -ForegroundColor White
+        Write-Host "║`e[38;5;90m░        ░░░      ░░░░      ░░░░      ░░░  ░░░░░░░░░      ░░░        ░░░      ░░░       ░░`e[0m║" -ForegroundColor White
+        Write-Host "║`e[38;5;126m▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒▒▒▒  ▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒`e[0m║" -ForegroundColor White
+        Write-Host "║`e[38;5;162m▓      ▓▓▓▓▓      ▓▓▓  ▓▓▓▓▓▓▓▓  ▓▓▓▓  ▓▓  ▓▓▓▓▓▓▓▓  ▓▓▓▓  ▓▓▓▓▓  ▓▓▓▓▓  ▓▓▓▓  ▓▓       ▓▓`e[0m║" -ForegroundColor White
+        Write-Host "║`e[38;5;198m█  ██████████████  ██  ████  ██        ██  ████████        █████  █████  ████  ██  ███  ██`e[0m║" -ForegroundColor White
+        Write-Host "║`e[38;5;203m█        ███      ████      ███  ████  ██        ██  ████  █████  ██████      ███  ████  █`e[0m║" -ForegroundColor White
+        Write-Host "╚══════════════════╦═════════════════════════════════════════════════╦═════════════════════╝" -ForegroundColor White
+        Write-Host "                   ║ AD CS Attack Path Identification and Abuse Tool ║" -ForegroundColor White
+        Write-Host "                   ║             (c) 2025 Jake Hildreth              ║" -ForegroundColor White
+        Write-Host "                   ║          `e[1mFOR EDUCATIONAL PURPOSES ONLY`e[0m          ║" -ForegroundColor White
+        Write-Host "                   ╚═════════════════════════════════════════════════╝" -ForegroundColor White
         Write-Host ""
-        Write-Host "::AD CS Attack Path Analysis" -ForegroundColor Cyan
+        Write-Host "Which attack paths would you like to display?"
+        Write-Host "1. Forest-wide"
+        Write-Host "2. Current context"
+        Write-Host "3. Specific user/computer"
         Write-Host ""
-        Write-Host "1. Display all attack paths available in the current context"
-        Write-Host "2. Display all attack paths available for a specific user/computer"
-        Write-Host "Q. Quit"
+        Write-Host "q. Quit"
         Write-Host ""
         
         $choice = Read-Host "Select an option"
@@ -43,13 +51,19 @@ function Start-ESCalator {
         switch ($choice.ToUpper()) {
             '1' {
                 Write-Host ""
-                Write-Host "You selected: 1" -ForegroundColor Yellow
+                Write-Host "You selected: 1 - Forest-wide" -ForegroundColor Yellow
                 Write-Host ""
                 Read-Host "Press Enter to continue"
             }
             '2' {
                 Write-Host ""
-                Write-Host "You selected: 2" -ForegroundColor Yellow
+                Write-Host "You selected: 2 - Current context" -ForegroundColor Yellow
+                Write-Host ""
+                Read-Host "Press Enter to continue"
+            }
+            '3' {
+                Write-Host ""
+                Write-Host "You selected: 3 - Specific user/computer" -ForegroundColor Yellow
                 Write-Host ""
                 Read-Host "Press Enter to continue"
             }

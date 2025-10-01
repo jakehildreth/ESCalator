@@ -27,9 +27,9 @@ function Start-ESCalator {
     do {
         Write-Host ""
         Write-Host "╔══════════════════════════════════════════════════════════════════════════════════════════╗" -ForegroundColor White
-        Write-Host "║`e[38;5;90m░        ░░░      ░░░░      ░░░░      ░░░  ░░░░░░░░░      ░░░        ░░░      ░░░       ░░`e[0m║" -ForegroundColor White
-        Write-Host "║`e[38;5;126m▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒▒▒▒▒  ▒▒▒▒  ▒▒▒▒▒  ▒▒▒▒▒  ▒▒▒▒  ▒▒  ▒▒▒▒  ▒`e[0m║" -ForegroundColor White
-        Write-Host "║`e[38;5;162m▓      ▓▓▓▓▓      ▓▓▓  ▓▓▓▓▓▓▓▓  ▓▓▓▓  ▓▓  ▓▓▓▓▓▓▓▓  ▓▓▓▓  ▓▓▓▓▓  ▓▓▓▓▓  ▓▓▓▓  ▓▓       ▓▓`e[0m║" -ForegroundColor White
+        Write-Host "║`e[38;5;90m█        ███      ████      ████      ███  █████████      ███        ███      ███       ██`e[0m║" -ForegroundColor White
+        Write-Host "║`e[38;5;126m█  ████████  ████████  ████  ██  ████  ██  ████████  ████  █████  █████  ████  ██  ████  █`e[0m║" -ForegroundColor White
+        Write-Host "║`e[38;5;162m█      █████      ███  ████████  ████  ██  ████████  ████  █████  █████  ████  ██       ██`e[0m║" -ForegroundColor White
         Write-Host "║`e[38;5;198m█  ██████████████  ██  ████  ██        ██  ████████        █████  █████  ████  ██  ███  ██`e[0m║" -ForegroundColor White
         Write-Host "║`e[38;5;203m█        ███      ████      ███  ████  ██        ██  ████  █████  ██████      ███  ████  █`e[0m║" -ForegroundColor White
         Write-Host "╚══════════════════╦═════════════════════════════════════════════════╦═════════════════════╝" -ForegroundColor White

@@ -23,6 +23,9 @@ function Get-GradientColors {
         .PARAMETER Preview
         Display a vertical preview of the gradient colors with ANSI codes and color names
 
+        .PARAMETER PassThru
+        When used with -Preview, returns the gradient colors to the pipeline in addition to displaying the preview
+
         .EXAMPLE
         $gradient = Get-GradientColors -StartColor "#FF0000" -EndColor "#0000FF" -Steps 5
         # Returns 5 ANSI color codes creating a red-to-blue gradient
@@ -37,7 +40,11 @@ function Get-GradientColors {
 
         .EXAMPLE
         Get-GradientColors -Theme "Ocean" -Steps 8 -Preview
-        # Creates an ocean-themed gradient with 8 steps and displays a preview
+        # Creates an ocean-themed gradient with 8 steps and displays a preview (no return value)
+
+        .EXAMPLE
+        $colors = Get-GradientColors -Theme "Ocean" -Steps 8 -Preview -PassThru
+        # Displays preview AND returns the gradient colors to the pipeline
     #>
     [CmdletBinding(DefaultParameterSetName = 'CustomColors')]
     param (
@@ -118,7 +125,11 @@ function Get-GradientColors {
         
         [Parameter(ParameterSetName = 'CustomColors')]
         [Parameter(ParameterSetName = 'Theme')]
-        [switch]$Preview
+        [switch]$Preview,
+        
+        [Parameter(ParameterSetName = 'CustomColors')]
+        [Parameter(ParameterSetName = 'Theme')]
+        [switch]$PassThru
     )
 
     # Predefined color themes
@@ -288,10 +299,12 @@ function Get-GradientColors {
         }
         
         Write-Host ""
-        # When Preview is enabled, don't return objects to pipeline
-        return
+        # When Preview is enabled, only return objects if PassThru is also specified
+        if (-not $PassThru) {
+            return
+        }
     }
 
-    # Only return gradient colors when not in preview mode
+    # Return gradient colors when not in preview mode or when PassThru is specified
     return $gradientColors
 }

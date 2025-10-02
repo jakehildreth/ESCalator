@@ -133,16 +133,6 @@ function Add-IssueToPrincipal {
             $Principal | Add-Member -NotePropertyName "VulnerableTechniques" -NotePropertyValue $techniques -Force
             $Principal | Add-Member -NotePropertyName "InheritedFromGroups" -NotePropertyValue $inheritedFromGroups -Force
             
-            # Principal-specific risk assessment
-            $riskLevel = if ($principalIssues.Count -eq 0) { "None" }
-                        elseif ($directIssues.Count -gt 0 -and $inheritedIssues.Count -gt 3) { "Critical" }
-                        elseif ($directIssues.Count -gt 0) { "High" }
-                        elseif ($inheritedIssues.Count -gt 5) { "High" }
-                        elseif ($inheritedIssues.Count -gt 2) { "Medium" }
-                        else { "Low" }
-            
-            $Principal | Add-Member -NotePropertyName "RiskLevel" -NotePropertyValue $riskLevel -Force
-
             # Principal-specific methods
             $Principal | Add-Member -MemberType ScriptMethod -Name "GetIssuesByObject" -Value {
                 param([string]$ObjectName)
@@ -157,7 +147,6 @@ function Add-IssueToPrincipal {
                     TotalIssues = $this.IssueCount
                     DirectIssues = $this.DirectIssueCount
                     InheritedIssues = $this.InheritedIssueCount
-                    RiskLevel = $this.RiskLevel
                     AffectedObjects = $this.AffectedObjectCount
                     InheritedFromGroups = $this.InheritedFromGroups -join ', '
                 }

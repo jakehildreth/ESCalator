@@ -147,11 +147,6 @@ class ESCalatorIssue {
         return -not [string]::IsNullOrEmpty($this.ExpandedFromGroup)
     }
 
-    # Method to check if this is a high-risk issue
-    [bool] IsHighRisk() {
-        return $this.ActiveDirectoryRights -match 'GenericAll|FullControl|WriteOwner|WriteDacl|Owner'
-    }
-
     # Method to get a summary of the issue
     [PSCustomObject] GetSummary() {
         return [PSCustomObject]@{
@@ -161,7 +156,6 @@ class ESCalatorIssue {
             Principal = $this.IdentityReference
             Rights = $this.ActiveDirectoryRights
             IsExpanded = $this.IsExpanded()
-            IsHighRisk = $this.IsHighRisk()
             ExpandedFrom = $this.ExpandedFromGroup
         }
     }

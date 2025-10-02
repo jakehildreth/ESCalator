@@ -40,7 +40,7 @@ function Add-IssueToObject {
 
         .EXAMPLE
         # Pipeline usage
-        Get-AdcsObjects | Add-Issue -Issues $AllIssues | Where-Object { $_.RiskLevel -eq "High" }
+        Get-AdcsObjects | Add-Issue -Issues $AllIssues | Where-Object { $_.HasIssues }
 
         .LINK
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
@@ -133,17 +133,6 @@ function Add-IssueToObject {
                 # Group issues by technique for easier analysis
                 $issuesByTechnique = $relatedIssues | Group-Object Technique -AsHashTable -AsString
                 
-                # Calculate risk level based on issue count and techniques
-                $riskLevel = if ($relatedIssues.Count -eq 0) { 
-                    "None" 
-                } elseif ($relatedIssues.Count -le 2) { 
-                    "Low" 
-                } elseif ($relatedIssues.Count -le 5) { 
-                    "Medium" 
-                } else { 
-                    "High" 
-                }
-                
                 # Get unique techniques and affected principals
                 $techniques = $relatedIssues | Select-Object -ExpandProperty Technique -Unique
                 $affectedPrincipals = $relatedIssues | Select-Object -ExpandProperty IdentityReference -Unique
@@ -154,7 +143,6 @@ function Add-IssueToObject {
                 $AdcsObject | Add-Member -NotePropertyName "HasIssues" -NotePropertyValue ($relatedIssues.Count -gt 0) -Force
                 $AdcsObject | Add-Member -NotePropertyName "IssuesByTechnique" -NotePropertyValue $issuesByTechnique -Force
                 $AdcsObject | Add-Member -NotePropertyName "VulnerableTechniques" -NotePropertyValue $techniques -Force
-                $AdcsObject | Add-Member -NotePropertyName "RiskLevel" -NotePropertyValue $riskLevel -Force
                 $AdcsObject | Add-Member -NotePropertyName "AffectedPrincipals" -NotePropertyValue $affectedPrincipals -Force
                 $AdcsObject | Add-Member -NotePropertyName "AffectedPrincipalCount" -NotePropertyValue $affectedPrincipals.Count -Force
                 
@@ -164,18 +152,11 @@ function Add-IssueToObject {
                     return $this.SecurityIssues | Where-Object { $_.Technique -eq $Technique }
                 } -Force
                 
-                $AdcsObject | Add-Member -MemberType ScriptMethod -Name "GetHighRiskIssues" -Value {
-                    return $this.SecurityIssues | Where-Object { 
-                        $_.ActiveDirectoryRights -match 'GenericAll|FullControl|WriteOwner|WriteDacl' 
-                    }
-                } -Force
-                
                 $AdcsObject | Add-Member -MemberType ScriptMethod -Name "GetIssueSummary" -Value {
                     $objName = if ($this.Name.Value) { $this.Name.Value } elseif ($this.Name) { $this.Name } else { "Unknown" }
                     $summary = [PSCustomObject]@{
                         ObjectName          = $objName
                         TotalIssues         = $this.IssueCount
-                        RiskLevel           = $this.RiskLevel
                         Techniques          = $this.VulnerableTechniques -join ', '
                         AffectedPrincipals  = $this.AffectedPrincipalCount
                     }

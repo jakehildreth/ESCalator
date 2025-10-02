@@ -251,16 +251,16 @@ function Find-ESC5 {
                                     
                                     if ($ace.ActiveDirectoryRights -match 'GenericAll') {
                                         $subtype = "WriteProperty-EnrollmentService-GenericAll"
-                                        $detailedIssue = "$($ace.IdentityReference) has GenericAll rights on the pKIEnrollmentService object '$ObjectName', allowing them to modify the certificateTemplates attribute and control which templates are published."
+                                        $detailedIssue = "$($ace.IdentityReference) has GenericAll rights on the pKIEnrollmentService object '$ObjectName', allowing them to modify the certificateTemplates attribute and control which templates are enabled."
                                     } elseif ($ace.ActiveDirectoryRights -match 'GenericWrite') {
                                         $subtype = "WriteProperty-EnrollmentService-GenericWrite"
-                                        $detailedIssue = "$($ace.IdentityReference) has GenericWrite rights on the pKIEnrollmentService object '$ObjectName', allowing them to modify the certificateTemplates attribute and control which templates are published."
+                                        $detailedIssue = "$($ace.IdentityReference) has GenericWrite rights on the pKIEnrollmentService object '$ObjectName', allowing them to modify the certificateTemplates attribute and control which templates are enabled."
                                     } elseif (-not $ace.ObjectType -or $ace.ObjectType.Guid -eq '00000000-0000-0000-0000-000000000000') {
                                         $subtype = "WriteProperty-EnrollmentService-AllObjects"
-                                        $detailedIssue = "$($ace.IdentityReference) has WriteProperty rights for All Objects on the pKIEnrollmentService object '$ObjectName', allowing them to modify the certificateTemplates attribute and control which templates are published."
+                                        $detailedIssue = "$($ace.IdentityReference) has WriteProperty rights for All Objects on the pKIEnrollmentService object '$ObjectName', allowing them to modify the certificateTemplates attribute and control which templates are enabled."
                                     } elseif ($ace.ObjectType.Guid -eq $CertificateTemplatesAttributeGUID) {
                                         $subtype = "WriteProperty-EnrollmentService-CertTemplatesAttr"
-                                        $detailedIssue = "$($ace.IdentityReference) has WriteProperty rights specifically for the certificateTemplates attribute on the pKIEnrollmentService object '$ObjectName', allowing them to control which templates are published."
+                                        $detailedIssue = "$($ace.IdentityReference) has WriteProperty rights specifically for the certificateTemplates attribute on the pKIEnrollmentService object '$ObjectName', allowing them to control which templates are enabled."
                                     }
                                 }
                                 
@@ -285,7 +285,7 @@ function Find-ESC5 {
                                 # ESC5 Subtype 6: WriteOwner on pKIEnrollmentService
                                 elseif ($Object.objectClass -contains 'pKIEnrollmentService' -and $ace.ActiveDirectoryRights -match 'WriteOwner') {
                                     $subtype = "WriteOwner-EnrollmentService"
-                                    $detailedIssue = "$($ace.IdentityReference) has WriteOwner rights on the pKIEnrollmentService object '$ObjectName', allowing them to take ownership and then modify permissions to control which templates are published."
+                                    $detailedIssue = "$($ace.IdentityReference) has WriteOwner rights on the pKIEnrollmentService object '$ObjectName', allowing them to take ownership and then modify permissions to control which templates are enabled."
                                 }
                                 
                                 # ESC5 Subtype 7: GenericWrite on Certificate Templates container (standalone)

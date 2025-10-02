@@ -12,7 +12,10 @@ $AdcsObjects | Set-EnabledTemplateStatus -EnabledTemplates $EnabledTemplates | O
 $SafeUsers = Expand-SafeUsers
 
 # Get all issues with AD CS objects
-$OriginalIssues = @(Find-ESC4Issue -AdcsObjects $AdcsObjects; Find-ESC5Issue -AdcsObjects $AdcsObjects)
+$OriginalIssues = @(
+    Find-ESC4Issue -AdcsObjects $AdcsObjects -SafeUsers $SafeUsers
+    Find-ESC5Issue -AdcsObjects $AdcsObjects -SafeUsers $SafeUsers
+)
 
 # Expand group ESCalatorIssue objects into individual principal ESCalatorIssue objects.
 $ExpandedIssues = $OriginalIssues | Expand-Issue

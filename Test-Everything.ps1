@@ -1,5 +1,7 @@
 # Import all functions
-Get-ChildItem "$PSScriptRoot\Private" | ForEach-Object { . $_ }
+Set-Location -Path C:\Users\Administrator.horse\Documents\ESCalator
+Get-ChildItem ".\Private\*.ps1" | ForEach-Object { . $_ }
+Get-ChildItem ".\Public\*.ps1" | ForEach-Object { . $_ }
 
 # Get AD CS objects
 $AdcsObjects = Get-AdcsObjects
@@ -18,3 +20,24 @@ $AllPrincipals = Get-IndividualPrincipals -Issues $OriginalIssues, $ExpandedIssu
 
 # Attach Issue objects to Principal Objects
 $AllPrincipals | Add-IssueToPrincipal -Issues $OriginalIssues, $ExpandedIssues
+
+# NEW: Find ESC1 Issue Combinations
+Write-Host "`n🎯 Analyzing ESC1 Issue Combinations..." -ForegroundColor Cyan
+$ESC1IssueCombinations = Find-ESC1IssueCombinations -Issues $OriginalIssues, $ExpandedIssues -Verbose
+
+# Display summary
+if ($ESC1IssueCombinations) {
+    Write-Host "`n✅ Found $($ESC1IssueCombinations.Count) ESC1 issue combination capabilities!" -ForegroundColor Green
+    
+    # Show issue combinations summary
+    Write-Host "`n� AD CS ISSUE COMBINATIONS FOUND:" -ForegroundColor Yellow
+    $ESC1IssueCombinations | Format-Table PrincipalName, IssueCombinationName, ESC4Capabilities, ESC5Capabilities -AutoSize
+    
+    # Generate comprehensive report
+    Write-Host "`n📊 Generating Issue Combination Report..." -ForegroundColor Cyan
+    $IssueCombinationReport = Get-ESC1IssueCombinationReport -IssueCombinations $ESC1IssueCombinations -ReportType Summary -IncludeStatistics
+    $IssueCombinationReport | Format-List
+    
+} else {
+    Write-Host "`n✅ No ESC1 issue combination capabilities found." -ForegroundColor Green
+}

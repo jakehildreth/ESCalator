@@ -1,10 +1,10 @@
 function Start-ESCalator {
     <#
         .SYNOPSIS
-        Interactive menu for ESCalator attack path analysis.
+        Interactive menu for ESCalator AD CS issue combination analysis.
 
         .DESCRIPTION
-        Displays a menu with options to analyze Active Directory Certificate Services attack paths.
+        Displays a menu with options to analyze Active Directory Certificate Services issue combinations.
 
         .INPUTS
         None
@@ -40,7 +40,7 @@ function Start-ESCalator {
         )
         
         # Display the simple menu
-        Show-MenuOptions -Title "ESCalator Attack Path Analysis" -Options $menuOptions
+        Show-MenuOptions -Title "Select Attack Combos to Display:" -Options $menuOptions
         
         # Get user choice with validation
         $choice = Get-MenuChoice -MaxOption 3 -Prompt "Select an option"

@@ -55,6 +55,9 @@ function New-Template {
         .LINK
         https://docs.microsoft.com/en-us/windows/win32/api/certca/
 
+        .LINK
+        https://github.com/Devolutions/devolutions-labs/blob/master/powershell/scripts/New-CertificateTemplate.ps1
+
         .NOTES
         Requires administrative privileges on the Certificate Authority.
         Uses Windows Certificate Authority API (certca.dll) for template operations.

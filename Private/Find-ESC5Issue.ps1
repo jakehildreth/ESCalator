@@ -32,6 +32,10 @@ function Find-ESC5Issue {
         .PARAMETER SafeOwners
         Regex pattern of SIDs for principals that are safe to own AD CS objects and containers.
 
+        .PARAMETER SafeUsers
+        Regex pattern of SIDs for principals that are considered safe and should be excluded from vulnerability findings.
+        Defaults to common administrative and system account SIDs.
+
         .PARAMETER SafeObjectTypes
         Array of object type GUIDs that are safe when granted specific permissions (Enroll, AutoEnroll).
 
@@ -85,6 +89,12 @@ function Find-ESC5Issue {
         $Issues = Find-ESC5 -AdcsObjects $AdcsObjects | Where-Object { $_.Name -eq "User" }
 
         .EXAMPLE
+        # Use expanded SafeUsers pattern to reduce false positives
+        $ExpandedSafeUsers = Expand-SafeUsers -AdcsObjects $AdcsObjects
+        $ESC5Issues = Find-ESC5Issue -AdcsObjects $AdcsObjects -SafeUsers $ExpandedSafeUsers
+        $ESC5Issues | Format-Table Name, IdentityReference, ActiveDirectoryRights
+
+        .EXAMPLE
         # Filter by specific ESC5 subtypes
         $CertTemplateCreationIssues = Find-ESC5 -AdcsObjects $AdcsObjects | Where-Object { $_.Subtype -like "*CreateChild-CertTemplates*" }
         $EnrollmentServiceIssues = Find-ESC5 -AdcsObjects $AdcsObjects | Where-Object { $_.Subtype -like "*WriteProperty-EnrollmentService*" }
@@ -116,6 +126,9 @@ function Find-ESC5Issue {
         [string]$SafeOwners = '-519$',
         
         [Parameter()]
+        [string]$SafeUsers = '-512$|-519$|-544$|-18$|-517$|-500$|-516$|-521$|-498$|-9$|-526$|-527$|S-1-5-10',
+        
+        [Parameter()]
         [string[]]$SafeObjectTypes = @('0e10c968-78fb-11d2-90d4-00c04f79dc55', 'a05b8cc2-17bc-4802-a710-e7c15ab866a2'),
         
         [Parameter()]
@@ -134,6 +147,7 @@ function Find-ESC5Issue {
         Write-Verbose "Starting ESC5 object vulnerability scan"
         Write-Verbose "Dangerous Rights: $($DangerousRights -join ', ')"
         Write-Verbose "Safe Owners Pattern: $SafeOwners"
+        Write-Verbose "Safe Users Pattern: $SafeUsers"
     }
 
     process {
@@ -176,8 +190,8 @@ function Find-ESC5Issue {
                             $ownerSID = $ownerPrincipal.Translate([System.Security.Principal.SecurityIdentifier]).Value
                         }
                         
-                        # Check if owner is unsafe
-                        if ($ownerSID -notmatch $SafeOwners) {
+                        # Check if owner is unsafe (not in SafeOwners and not in SafeUsers)
+                        if ($ownerSID -notmatch $SafeOwners -and $ownerSID -notmatch $SafeUsers) {
                             Write-Verbose "Found dangerous owner: $($security.Owner)"
                             
                             [ESCalatorIssue]::CreateOriginalIssue(
@@ -193,6 +207,8 @@ function Find-ESC5Issue {
                                 $null,                                          # ObjectType
                                 $Object                                         # DirectoryEntry
                             )
+                        } else {
+                            Write-Verbose "Owner $($security.Owner) is considered safe, skipping"
                         }
                     } catch {
                         Write-Warning "Failed to process owner '$($security.Owner)' for object $ObjectName : $_"
@@ -233,7 +249,9 @@ function Find-ESC5Issue {
 
                             if (($ace.AccessControlType -eq 'Allow') -and
                                 $hasDangerousRights -and
-                                -not $isSafeObjectType) {
+                                -not $isSafeObjectType -and
+                                ($aceSID -notmatch $SafeOwners) -and
+                                ($aceSID -notmatch $SafeUsers)) {
                                 
                                 Write-Verbose "Found dangerous permission: $($ace.IdentityReference) has $($ace.ActiveDirectoryRights)"
 

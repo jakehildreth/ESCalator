@@ -47,6 +47,12 @@
       }
     ]
   },
+  "prerequisites": [
+    "Target certificate template is NOT currently published/enabled on any Certificate Authority",
+    "Principal has granular modification rights on specific template attributes",
+    "Principal has ESC5 rights to publish templates to Certificate Authority",
+    "Certificate Authority is accessible for template publication and enrollment"
+  ],
   "steps": [
     "Identify certificate template with granular WriteProperty permissions",
     "Modify enrollment flag to disable manager approval",

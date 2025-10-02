@@ -28,6 +28,12 @@
       }
     ]
   },
+  "prerequisites": [
+    "Target certificate template is NOT currently published/enabled on any Certificate Authority",
+    "Principal has privilege escalation rights (WriteOwner/WriteDacl) on unpublished template",
+    "Principal has ESC5 rights to publish templates to Certificate Authority",
+    "Certificate Authority is accessible for template publication and enrollment"
+  ],
   "steps": [
     "Use WriteOwner/WriteDacl to take control of certificate template",
     "Grant self full permissions on the template",

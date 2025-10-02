@@ -31,6 +31,12 @@
       }
     ]
   },
+  "prerequisites": [
+    "Principal can create new certificate templates (ESC5 CreateChild rights)",
+    "Principal has ESC5 rights to publish templates to Certificate Authority", 
+    "New template will be created as unpublished by default",
+    "Certificate Authority is accessible for template publication and enrollment"
+  ],
   "steps": [
     "Create new certificate template in Certificate Templates container",
     "Configure template with ESC1 settings (no manager approval, Client Auth EKU, SAN enabled)",

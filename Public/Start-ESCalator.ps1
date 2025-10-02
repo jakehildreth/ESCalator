@@ -31,6 +31,16 @@ function Start-ESCalator {
     # Show the ESCalator header with consistent session colors
     Show-ESCalatorHeader -Color1 $sessionColors[0] -Color2 $sessionColors[1] -Color3 $sessionColors[2] -Color4 $sessionColors[3] -Color5 $sessionColors[4]
     
+    # Define SafeUsers SID pattern for well-known privileged security principals
+    # Based on Locksmith's SafeUsers definition for consistent security evaluation
+    # These SIDs represent built-in administrative accounts that are considered safe to have elevated permissions:
+    # -512: Domain Admins, -519: Enterprise Admins, -544: Administrators, -18: SYSTEM
+    # -517: Cert Publishers, -500: Administrator, -516: Domain Controllers, -521: Read-only Domain Controllers
+    # -498: Enterprise Read-only Domain Controllers, -9: Enterprise Domain Controllers
+    # -526: Key Admins, -527: Enterprise Key Admins, S-1-5-10: Principal Self
+    $SafeUsers = Expand-SafeUsers
+    Write-Verbose "SafeUsers pattern defined: $SafeUsers"
+    
     # Initialize variables for the comprehensive analysis (run once)
     Write-Host "🚀 Initializing ESCalator Analysis Engine..." -ForegroundColor Cyan
     Write-Host ""
@@ -41,7 +51,8 @@ function Start-ESCalator {
         $AdcsObjects = Get-AdcsObjects
         Write-Host "   ✅ Successfully retrieved $($AdcsObjects.Count) AD CS objects" -ForegroundColor Green
         Write-Host "   • Determining template enrollment status..." -ForegroundColor Gray
-        $AdcsObjects | Get-EnabledTemplate | Set-EnabledTemplateStatus | Out-Null
+        $EnabledTemplates = $AdcsObjects | Get-EnabledTemplate
+        $AdcsObjects | Set-EnabledTemplateStatus -EnabledTemplates $EnabledTemplates | Out-Null
         Write-Host "   ✅ Template enrollment status determined" -ForegroundColor Green
     } catch {
         Write-Host "   ❌ Failed to retrieve AD CS objects: $($_.Exception.Message)" -ForegroundColor Red

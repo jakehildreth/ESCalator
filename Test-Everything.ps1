@@ -5,6 +5,11 @@ Get-ChildItem ".\Public\*.ps1" | ForEach-Object { . $_ }
 
 # Get AD CS objects
 $AdcsObjects = Get-AdcsObjects
+$EnabledTemplates = $AdcsObjects | Get-EnabledTemplate
+$AdcsObjects | Set-EnabledTemplateStatus -EnabledTemplates $EnabledTemplates | Out-Null
+
+# Get Safe User SIDs
+$SafeUsers = Expand-SafeUsers
 
 # Get all issues with AD CS objects
 $OriginalIssues = @(Find-ESC4Issue -AdcsObjects $AdcsObjects; Find-ESC5Issue -AdcsObjects $AdcsObjects)

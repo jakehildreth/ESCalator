@@ -9,7 +9,7 @@ function Find-IssueCombos {
         JSON configuration files and matches principal capabilities against required prerequisites.
 
         .PARAMETER Issues
-        Array of ESCalatorIssue objects from Find-ESC4 and Find-ESC5 scans.
+        Array of ESCalatorIssue objects from Find-ESC4Issue and Find-ESC5Issue scans.
         Supports multiple arrays that will be automatically flattened.
 
         .PARAMETER ConfigPath
@@ -20,7 +20,7 @@ function Find-IssueCombos {
 
         .INPUTS
         ESCalatorIssue[]
-        Objects from Find-ESC4 and Find-ESC5 vulnerability scans.
+        Objects from Find-ESC4Issue and Find-ESC5Issue vulnerability scans.
 
         .OUTPUTS
         PSCustomObject[]
@@ -40,7 +40,7 @@ function Find-IssueCombos {
         - ExpandedFromGroup: Original group if expanded
 
         .EXAMPLE
-        $AllIssues = @(Find-ESC4 -AdcsObjects $AdcsObjects; Find-ESC5 -AdcsObjects $AdcsObjects)
+        $AllIssues = @(Find-ESC4Issue -AdcsObjects $AdcsObjects; Find-ESC5Issue -AdcsObjects $AdcsObjects)
         $IssueCombos = Find-IssueCombos -Issues $AllIssues
         $IssueCombos | Format-Table PrincipalName, IssueComboName
         

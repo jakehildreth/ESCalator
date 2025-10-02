@@ -26,12 +26,12 @@ function Expand-Issue {
         plus any non-group issues unchanged.
 
         .EXAMPLE
-        $Issues = Find-ESC4 -AdcsObjects $AdcsObjects
+        $Issues = Find-ESC4Issue -AdcsObjects $AdcsObjects
         $ExpandedIssues = $Issues | Expand-Issue
         $ExpandedIssues | Where-Object { $_.IsExpanded() } | Format-Table
 
         .EXAMPLE
-        $ESC5Issues = Find-ESC5 -AdcsObjects $AdcsObjects
+        $ESC5Issues = Find-ESC5Issue -AdcsObjects $AdcsObjects
         $AllExpanded = $ESC5Issues | Expand-Issue -Recursive $true
         Write-Host "Original issues: $($ESC5Issues.Count), Expanded: $($AllExpanded.Count)"
 

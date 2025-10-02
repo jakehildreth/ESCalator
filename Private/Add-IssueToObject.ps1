@@ -5,20 +5,20 @@ function Add-IssueToObject {
 
         .DESCRIPTION
         This function takes DirectoryEntry objects from Get-AdcsObjects and attaches security issues
-        found by Find-ESC4, Find-ESC5, and other vulnerability scanning functions as properties.
+        found by Find-ESC4Issue, Find-ESC5Issue, and other vulnerability scanning functions as properties.
 
         .PARAMETER AdcsObjects
         Array of DirectoryEntry objects from Get-AdcsObjects to attach issues to.
 
         .PARAMETER Issues
-        Array of ESCalatorIssue objects from Find-ESC4, Find-ESC5, or other vulnerability scanning functions.
+        Array of ESCalatorIssue objects from Find-ESC4Issue, Find-ESC5Issue, or other vulnerability scanning functions.
         Supports multiple arrays that will be automatically flattened.
 
         .INPUTS
         System.DirectoryServices.DirectoryEntry[]
         DirectoryEntry objects from Get-AdcsObjects
         ESCalatorIssue[]
-        ESCalatorIssue objects from Find-ESC4, Find-ESC5, or other vulnerability scanning functions.
+        ESCalatorIssue objects from Find-ESC4Issue, Find-ESC5Issue, or other vulnerability scanning functions.
         Supports multiple arrays that will be automatically flattened.
 
         .OUTPUTS
@@ -27,14 +27,14 @@ function Add-IssueToObject {
 
         .EXAMPLE
         $AdcsObjects = Get-AdcsObjects
-        $ESC4Issues = Find-ESC4 -AdcsObjects $AdcsObjects
-        $ESC5Issues = Find-ESC5 -AdcsObjects $AdcsObjects
+        $ESC4Issues = Find-ESC4Issue -AdcsObjects $AdcsObjects
+        $ESC5Issues = Find-ESC5Issue -AdcsObjects $AdcsObjects
         $AllIssues = @($ESC4Issues; $ESC5Issues)
         $ObjectsWithIssues = Add-Issue -AdcsObjects $AdcsObjects -Issues $AllIssues
 
         .EXAMPLE
         $AdcsObjects = Get-AdcsObjects
-        $Issues = @(Find-ESC4 -AdcsObjects $AdcsObjects; Find-ESC5 -AdcsObjects $AdcsObjects)
+        $Issues = @(Find-ESC4Issue -AdcsObjects $AdcsObjects; Find-ESC5Issue -AdcsObjects $AdcsObjects)
         $ObjectsWithIssues = Add-Issue -AdcsObjects $AdcsObjects -Issues $Issues
         $VulnerableObjects = $ObjectsWithIssues | Where-Object { $_.HasIssues }
 

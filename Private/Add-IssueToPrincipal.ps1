@@ -18,7 +18,7 @@ function Add-IssueToPrincipal {
         .INPUTS
         System.DirectoryServices.DirectoryEntry[]
         ESCalatorIssue[]
-        ESCalatorIssue objects from Find-ESC4, Find-ESC5, or other vulnerability scanning functions.
+        ESCalatorIssue objects from Find-ESC4Issue, Find-ESC5Issue, or other vulnerability scanning functions.
         Supports multiple arrays that will be automatically flattened.
 
         .OUTPUTS

@@ -56,12 +56,12 @@ function Start-ESCalator {
         $OriginalIssues = @()
         
         Write-Host "   • Analyzing ESC4 (Vulnerable Certificate Template Access Control)..." -ForegroundColor Gray
-        $ESC4Issues = Find-ESC4 -AdcsObjects $AdcsObjects
+        $ESC4Issues = Find-ESC4Issue -AdcsObjects $AdcsObjects
         $OriginalIssues += $ESC4Issues
         Write-Host "     ✅ Found $($ESC4Issues.Count) ESC4 issues" -ForegroundColor Green
         
         Write-Host "   • Analyzing ESC5 (Vulnerable PKI Object Access Control)..." -ForegroundColor Gray
-        $ESC5Issues = Find-ESC5 -AdcsObjects $AdcsObjects
+        $ESC5Issues = Find-ESC5Issue -AdcsObjects $AdcsObjects
         $OriginalIssues += $ESC5Issues
         Write-Host "     ✅ Found $($ESC5Issues.Count) ESC5 issues" -ForegroundColor Green
         

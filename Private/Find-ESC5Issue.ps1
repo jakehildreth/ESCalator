@@ -1,7 +1,7 @@
 function Find-ESC5Issue {
     <#
         .SYNOPSIS
-        .EXAMPLE
+        Iden        .EXAMPLE
         $AdcsObjects = Get-AdcsObjects
         $ESC5Issues = Find-ESC5Issue -AdcsObjects $AdcsObjects
         $ESC5Issues | Format-Table Name, IdentityReference, ActiveDirectoryRights

@@ -7,7 +7,7 @@ Get-ChildItem ".\Public\*.ps1" | ForEach-Object { . $_ }
 $AdcsObjects = Get-AdcsObjects
 
 # Get all issues with AD CS objects
-$OriginalIssues = @(Find-ESC4 -AdcsObjects $AdcsObjects; Find-ESC5 -AdcsObjects $AdcsObjects)
+$OriginalIssues = @(Find-ESC4Issue -AdcsObjects $AdcsObjects; Find-ESC5Issue -AdcsObjects $AdcsObjects)
 
 # Expand group ESCalatorIssue objects into individual principal ESCalatorIssue objects.
 $ExpandedIssues = $OriginalIssues | Expand-Issue

@@ -13,31 +13,20 @@ $OriginalIssues = @(Find-ESC4Issue -AdcsObjects $AdcsObjects; Find-ESC5Issue -Ad
 $ExpandedIssues = $OriginalIssues | Expand-Issue
 
 # Attach Issue objects to AD CS objects (using both original and expanded issues)
-$AdcsObjects | Add-IssueToObject -Issues $OriginalIssues, $ExpandedIssues
+$AdcsObjects | Add-IssueToObject -Issues $OriginalIssues, $ExpandedIssues | Out-Null
 
 # Get all individual principals identified in Issues
 $AllPrincipals = Get-IndividualPrincipals -Issues $OriginalIssues, $ExpandedIssues
 
 # Attach Issue objects to Principal Objects
-$AllPrincipals | Add-IssueToPrincipal -Issues $OriginalIssues, $ExpandedIssues
+$AllPrincipals | Add-IssueToPrincipal -Issues $OriginalIssues, $ExpandedIssues | Out-Null
 
-# NEW: Find ESC Issue Combinations
-Write-Host "`n🎯 Analyzing ESC Issue Combinations..." -ForegroundColor Cyan
-$IssueCombos = Find-IssueCombos -Issues $OriginalIssues, $ExpandedIssues -Verbose
-
-# Display summary
-if ($IssueCombos) {
-    Write-Host "`n✅ Found $($IssueCombos.Count) ESC issue combination capabilities!" -ForegroundColor Green
-    
-    # Show issue combinations summary
-    Write-Host "`n� AD CS ISSUE COMBINATIONS FOUND:" -ForegroundColor Yellow
-    $IssueCombos | Format-Table PrincipalName, IssueComboName, ESC4Capabilities, ESC5Capabilities -AutoSize
-    
-    # Generate comprehensive report
-    Write-Host "`n📊 Generating Issue Combination Report..." -ForegroundColor Cyan
-    $IssueComboReport = Get-IssueComboReport -IssueCombos $IssueCombos -ReportType Summary -IncludeStatistics
-    $IssueComboReport | Format-List
-    
-} else {
-    Write-Host "`n✅ No ESC issue combination capabilities found." -ForegroundColor Green
-}
+# Mini report
+$AllIssues = $OriginalIssues + $ExpandedIssues
+@"
+Original Issues: $($OriginalIssues.Count)
+Expanded Issues: $($ExpandedIssues.Count)
+All Issues:      $($AllIssues.Count)
+ESC4s:           $($AllIssues.Where({$_.Technique -eq 'ESC4'}).Count)
+ESC5s:           $($AllIssues.Where({$_.Technique -eq 'ESC5'}).Count)
+"@

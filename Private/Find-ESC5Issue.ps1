@@ -1,7 +1,7 @@
 function Find-ESC5Issue {
     <#
         .SYNOPSIS
-        Iden        .EXAMPLE
+        I        .EXAMPLE
         $AdcsObjects = Get-AdcsObjects
         $ESC5Issues = Find-ESC5Issue -AdcsObjects $AdcsObjects
         $ESC5Issues | Format-Table Name, IdentityReference, ActiveDirectoryRights
@@ -16,21 +16,10 @@ function Find-ESC5Issue {
 
         .EXAMPLE
         # Access the DirectoryEntry object for additional properties
-        $ESC5Issues = Find-ESC5Issue -AdcsObjects $AdcsObjects
-        $ESC5Issues[0].DirectoryEntry.Properties
-        
-        # Use DirectoryEntry for further analysis
-        $ESC5Issues | ForEach-Object {
-            Write-Host "Object: $($_.Name) [Subtype: $($_.Subtype)]"
-            Write-Host "  Object Class: $($_.DirectoryEntry.objectClass)"
-            Write-Host "  Created: $($_.DirectoryEntry.whenCreated)"
-        }
+        $ESC5Issues = Find-ESC5Issue -AdcsObjects $AdcsObjects Directory Certificate Services (AD CS) objects and containers vulnerable to ESC5 attacks by analyzing permissions on AD CS objects.
 
-        .LINK
-        https://posts.specterops.io/certified-pre-owned-d95910965cd2
-    #>
-    [CmdletBinding()]
-    param (
+        .DESCRIPTION
+        This function analyzes Active Directory Certificate Services (AD CS) objects to identify ESC5 vulnerabilities.
         ESC5 occurs when non-administrative principals have dangerous permissions (like GenericAll, WriteProperty, 
         WriteOwner, WriteDacl) on AD CS objects and containers.
 
@@ -89,20 +78,20 @@ function Find-ESC5Issue {
 
         .EXAMPLE
         $AdcsObjects = Get-AdcsObjects
-        $ESC5Issues = Find-ESC5Issue -AdcsObjects $AdcsObjects
+        $ESC5Issues = Find-ESC5 -AdcsObjects $AdcsObjects
         $ESC5Issues | Format-Table Name, IdentityReference, ActiveDirectoryRights
 
         .EXAMPLE
-        $Issues = Find-ESC5Issue -AdcsObjects $AdcsObjects | Where-Object { $_.Name -eq "User" }
+        $Issues = Find-ESC5 -AdcsObjects $AdcsObjects | Where-Object { $_.Name -eq "User" }
 
         .EXAMPLE
         # Filter by specific ESC5 subtypes
-        $CertTemplateCreationIssues = Find-ESC5Issue -AdcsObjects $AdcsObjects | Where-Object { $_.Subtype -like "*CreateChild-CertTemplates*" }
-        $EnrollmentServiceIssues = Find-ESC5Issue -AdcsObjects $AdcsObjects | Where-Object { $_.Subtype -like "*WriteProperty-EnrollmentService*" }
+        $CertTemplateCreationIssues = Find-ESC5 -AdcsObjects $AdcsObjects | Where-Object { $_.Subtype -like "*CreateChild-CertTemplates*" }
+        $EnrollmentServiceIssues = Find-ESC5 -AdcsObjects $AdcsObjects | Where-Object { $_.Subtype -like "*WriteProperty-EnrollmentService*" }
 
         .EXAMPLE
         # Access the DirectoryEntry object for additional properties
-        $ESC5Issues = Find-ESC5Issue -AdcsObjects $AdcsObjects
+        $ESC5Issues = Find-ESC5 -AdcsObjects $AdcsObjects
         $ESC5Issues[0].DirectoryEntry.Properties
         
         # Use DirectoryEntry for further analysis

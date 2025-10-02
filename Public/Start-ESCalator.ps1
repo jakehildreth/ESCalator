@@ -44,18 +44,8 @@ function Start-ESCalator {
             $color5 = 203  # coral
         }
         
-        Write-Host ""
-        Write-Host "`e[38;5;${color1}m█        ███      ████      ████      ███  █████████      ███        ███      ███       ██`e[0m" -ForegroundColor White
-        Write-Host "`e[38;5;${color2}m█  ████████  ████████  ████  ██  ████  ██  ████████  ████  █████  █████  ████  ██  ████  █`e[0m" -ForegroundColor White
-        Write-Host "`e[38;5;${color3}m█      █████      ███  ████████  ████  ██  ████████  ████  █████  █████  ████  ██       ██`e[0m" -ForegroundColor White
-        Write-Host "`e[38;5;${color4}m█  ██████████████  ██  ████  ██        ██  ████████        █████  █████  ████  ██  ███  ██`e[0m" -ForegroundColor White
-        Write-Host "`e[38;5;${color5}m█        ███      ████      ███  ████  ██        ██  ████  █████  ██████      ███  ████  █`e[0m" -ForegroundColor White
-        Write-Host "`e[38;5;${color5}m                   ╔═════════════════════════════════════════════════╗`e[0m"
-        Write-Host "`e[38;5;${color4}m                   ║`e[0m AD CS Attack Path Identification and Abuse Tool `e[38;5;${color4}m║`e[0m"
-        Write-Host "`e[38;5;${color3}m                   ║`e[0m             (c) 2025 Jake Hildreth              `e[38;5;${color3}m║`e[0m"
-        Write-Host "`e[38;5;${color2}m                   ║`e[0m          `e[1mFOR EDUCATIONAL PURPOSES ONLY`e[0m          `e[38;5;${color2}m║`e[0m"
-        Write-Host "`e[38;5;${color1}m                   ╚═════════════════════════════════════════════════╝`e[0m"
-        Write-Host ""
+        Show-ESCalatorHeader -Color1 $color1 -Color2 $color2 -Color3 $color3 -Color4 $color4 -Color5 $color5
+        
         Write-Host "Which attack paths would you like to display?"
         Write-Host "1. Current user/computer context"
         Write-Host "2. Specific user/computer"

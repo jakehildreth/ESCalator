@@ -24,51 +24,51 @@ function Start-ESCalator {
 
     #requires -Version 5
 
+    # Select random theme colors once at the start of the session
+    $sessionColors = Get-GradientColors -Theme "Random" -Steps 5
+    Write-Verbose "Session theme colors selected: $($sessionColors -join ', ')"
+
     do {
-        # Get random gradient colors
-        $colors = Get-RandomGradientColors
+        # Show the ESCalator header with consistent session colors
+        Show-ESCalatorHeader -Color1 $sessionColors[0] -Color2 $sessionColors[1] -Color3 $sessionColors[2] -Color4 $sessionColors[3] -Color5 $sessionColors[4]
         
-        Show-ESCalatorHeader -Color1 $colors.Color1 -Color2 $colors.Color2 -Color3 $colors.Color3 -Color4 $colors.Color4 -Color5 $colors.Color5
+        # Create menu options array
+        $menuOptions = @(
+            "Current user/computer context",
+            "Specific user/computer", 
+            "Forest-wide analysis"
+        )
         
-        Write-Host "Which attack paths would you like to display?"
-        Write-Host "1. Current user/computer context"
-        Write-Host "2. Specific user/computer"
-        Write-Host "3. Forest-wide"
-        Write-Host ""
-        Write-Host "q. Quit"
-        Write-Host ""
+        # Display the simple menu
+        Show-MenuOptions -Title "ESCalator Attack Path Analysis" -Options $menuOptions
         
-        $choice = Read-Host "Select an option"
+        # Get user choice with validation
+        $choice = Get-MenuChoice -MaxOption 3 -Prompt "Select an option"
         
-        switch ($choice.ToUpper()) {
-            '1' {
+        switch ($choice) {
+            1 {
                 Write-Host ""
-                Write-Host "You selected: 1 - Current user/computer context" -ForegroundColor Yellow
+                Write-Host "You selected: Current user/computer context" -ForegroundColor Yellow
                 Write-Host ""
                 Read-Host "Press Enter to continue"
             }
-            '2' {
+            2 {
                 Write-Host ""
-                Write-Host "You selected: 2 - Specific user/computer" -ForegroundColor Yellow
-                Write-Host ""
-                Read-Host "Press Enter to continue"
-            }
-            '3' {
-                Write-Host ""
-                Write-Host "You selected: 3 - Forest-wide" -ForegroundColor Yellow
+                Write-Host "You selected: Specific user/computer" -ForegroundColor Yellow
                 Write-Host ""
                 Read-Host "Press Enter to continue"
             }
-            'Q' {
+            3 {
                 Write-Host ""
-                Write-Host "Goodbye!" -ForegroundColor Green
-                break
+                Write-Host "You selected: Forest-wide analysis" -ForegroundColor Yellow
+                Write-Host ""
+                Read-Host "Press Enter to continue"
             }
-            default {
+            'q' {
                 Write-Host ""
-                Write-Host "Invalid selection. Please choose 1, 2, 3, or Q." -ForegroundColor Red
-                Start-Sleep -Seconds 1
+                Write-Host "Goodbye! 👋" -ForegroundColor Green
+                return  # Exit the function completely
             }
         }
-    } while ($choice.ToUpper() -ne 'Q')
+    } while ($choice -ne 'q')
 }

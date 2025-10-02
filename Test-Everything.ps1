@@ -23,19 +23,19 @@ $AllPrincipals | Add-IssueToPrincipal -Issues $OriginalIssues, $ExpandedIssues
 
 # NEW: Find ESC1 Issue Combinations
 Write-Host "`n🎯 Analyzing ESC1 Issue Combinations..." -ForegroundColor Cyan
-$ESC1IssueCombinations = Find-ESC1IssueCombinations -Issues $OriginalIssues, $ExpandedIssues -Verbose
+$IssueCombinations = Find-IssueCombinations -Issues $OriginalIssues, $ExpandedIssues -Verbose
 
 # Display summary
-if ($ESC1IssueCombinations) {
-    Write-Host "`n✅ Found $($ESC1IssueCombinations.Count) ESC1 issue combination capabilities!" -ForegroundColor Green
+if ($IssueCombinations) {
+    Write-Host "`n✅ Found $($IssueCombinations.Count) ESC1 issue combination capabilities!" -ForegroundColor Green
     
     # Show issue combinations summary
     Write-Host "`n� AD CS ISSUE COMBINATIONS FOUND:" -ForegroundColor Yellow
-    $ESC1IssueCombinations | Format-Table PrincipalName, IssueCombinationName, ESC4Capabilities, ESC5Capabilities -AutoSize
+    $IssueCombinations | Format-Table PrincipalName, IssueCombinationName, ESC4Capabilities, ESC5Capabilities -AutoSize
     
     # Generate comprehensive report
     Write-Host "`n📊 Generating Issue Combination Report..." -ForegroundColor Cyan
-    $IssueCombinationReport = Get-ESC1IssueCombinationReport -IssueCombinations $ESC1IssueCombinations -ReportType Summary -IncludeStatistics
+    $IssueCombinationReport = Get-IssueCombinationReport -IssueCombinations $IssueCombinations -ReportType Summary -IncludeStatistics
     $IssueCombinationReport | Format-List
     
 } else {

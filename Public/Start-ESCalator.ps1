@@ -152,95 +152,10 @@ function Start-ESCalator {
         
         switch ($choice) {
             1 {
-                # Check if user is local administrator
-                Write-Host "Checking local administrator privileges..." -ForegroundColor Cyan
-                $isLocalAdmin = Test-IsLocalAdmin
-                
-                if ($isLocalAdmin) {
-                    Write-Host "✅ Local administrator privileges confirmed" -ForegroundColor Green
-                    Write-Host "   → Displaying combinations for current user AND current computer" -ForegroundColor Gray
-                } else {
-                    Write-Host "ℹ️ Running with standard user privileges" -ForegroundColor Yellow
-                    Write-Host "   → Displaying combinations for current user only" -ForegroundColor Gray
-                }
                 Write-Host ""
-                
-                # Use the pre-loaded issue combinations data
-                if ($IssueCombinations) {
-                    # Filter combinations based on admin status
-                    $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-                    $currentComputer = $env:COMPUTERNAME
-                    
-                    if ($isLocalAdmin) {
-                        # Show combinations for both current user AND current computer
-                        $filteredCombinations = $IssueCombinations | Where-Object {
-                            $_.PrincipalName -eq $currentUser -or 
-                            $_.PrincipalName -eq "$currentComputer$" -or
-                            $_.PrincipalName -eq "$env:USERDOMAIN\$currentComputer$"
-                        }
-                        $contextDescription = "Current User/Computer Context (Admin)"
-                    } else {
-                        # Show combinations for current user only
-                        $filteredCombinations = $IssueCombinations | Where-Object {
-                            $_.PrincipalName -eq $currentUser
-                        }
-                        $contextDescription = "Current User Context (Standard User)"
-                    }
-                    
-                    if ($filteredCombinations) {
-                        Write-Host "📊 Using pre-loaded analysis results..." -ForegroundColor Cyan
-                        Write-Host "✅ Found $($filteredCombinations.Count) relevant issue combination capabilities!" -ForegroundColor Green
-                        Write-Host ""
-                            
-                        # Create submenu for issue combinations
-                        do {
-                            Show-ESCalatorHeader -Color1 $sessionColors[0] -Color2 $sessionColors[1] -Color3 $sessionColors[2] -Color4 $sessionColors[3] -Color5 $sessionColors[4]
-                            
-                            Write-Host "📊 IDENTIFIED ISSUE COMBINATIONS" -ForegroundColor Yellow
-                            Write-Host $contextDescription -ForegroundColor Gray
-                            Write-Host ""
-                            
-                            # Group combinations by type for menu
-                            $groupedCombos = $filteredCombinations | Group-Object IssueCombinationName | Sort-Object Name
-                            
-                            $subMenuOptions = @()
-                            foreach ($group in $groupedCombos) {
-                                $subMenuOptions += "$($group.Name) ($($group.Count) instances)"
-                            }
-                            
-                            Show-MenuOptions -Title "Select Issue Combination to View:" -Options $subMenuOptions -AllowBack
-                            
-                            $subChoice = Get-MenuChoice -MaxOption $subMenuOptions.Count -Prompt "Select an option" -AllowBack
-                            
-                            if ($subChoice -eq 'q') {
-                                # Quit entirely
-                                Write-Host ""
-                                Write-Host "Goodbye! 👋" -ForegroundColor Green
-                                return
-                            } elseif ($subChoice -eq 'b') {
-                                # Return to main menu (back option)
-                                break
-                            } elseif ($subChoice -ge 1 -and $subChoice -le $groupedCombos.Count) {
-                                # Show specific combination details
-                                $selectedGroup = $groupedCombos[$subChoice - 1]
-                                Write-Host ""
-                                Write-Host "📋 Details for: $($selectedGroup.Name)" -ForegroundColor Yellow
-                                Write-Host ""
-                                $selectedGroup.Group | Format-Table PrincipalName, ESC4Capabilities, ESC5Capabilities -AutoSize
-                                Write-Host ""
-                                Read-Host "Press Enter to continue"
-                            }
-                        } while ($subChoice -ne 'b' -and $subChoice -ne 'q')
-                    } else {
-                        Write-Host "ℹ️ No issue combination capabilities found for current context." -ForegroundColor Blue
-                        Write-Host ""
-                        Read-Host "Press Enter to continue"
-                    }
-                } else {
-                    Write-Host "ℹ️ No issue combination capabilities found." -ForegroundColor Blue
-                    Write-Host ""
-                    Read-Host "Press Enter to continue"
-                }
+                Write-Host "You selected: Current user/computer context" -ForegroundColor Yellow
+                Write-Host ""
+                Read-Host "Press Enter to continue"
             }
             2 {
                 Write-Host ""

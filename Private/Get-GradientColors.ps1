@@ -1,11 +1,11 @@
 function Get-GradientColors {
     <#
         .SYNOPSIS
-        Generates a gradient of ANSI color codes between two colors or from a predefined theme.
+        Generates a gradient of true color ANSI escape sequences between two colors or from a predefined theme.
 
         .DESCRIPTION
         Creates a smooth color gradient between two colors by calculating
-        intermediate RGB values and converting them to the nearest ANSI 256-color codes.
+        intermediate RGB values and outputting them as 24-bit true color ANSI escape sequences.
         Supports both custom color specification and predefined color themes.
 
         .PARAMETER StartColor
@@ -25,6 +25,9 @@ function Get-GradientColors {
 
         .PARAMETER PassThru
         When used with -Preview, returns the gradient colors to the pipeline in addition to displaying the preview
+
+        .PARAMETER Legacy256Color
+        Use legacy 256-color mode instead of 24-bit true color (for compatibility with older terminals)
 
         .EXAMPLE
         $gradient = Get-GradientColors -StartColor "#FF0000" -EndColor "#0000FF" -Steps 5
@@ -124,7 +127,7 @@ function Get-GradientColors {
         [int]$Steps,
         
         [Parameter(Mandatory, ParameterSetName = 'Theme')]
-        [ValidateSet('Sunset', 'Ocean', 'Forest', 'Fire', 'Purple', 'Grayscale', 'Rainbow', 'Neon', 'Cyberpunk', 'Pastel', 'Autumn', 'Winter', 'Spring', 'Summer', 'Random')]
+        [ValidateSet('Best', 'Sunset', 'Ocean', 'Forest', 'Fire', 'Purple', 'Grayscale', 'Rainbow', 'Neon', 'Cyberpunk', 'Pastel', 'Autumn', 'Winter', 'Spring', 'Summer', 'Random')]
         [string]$Theme,
         
         [Parameter(ParameterSetName = 'CustomColors')]
@@ -133,26 +136,30 @@ function Get-GradientColors {
         
         [Parameter(ParameterSetName = 'CustomColors')]
         [Parameter(ParameterSetName = 'Theme')]
-        [switch]$PassThru
+        [switch]$PassThru,
+        
+        [Parameter(ParameterSetName = 'CustomColors')]
+        [Parameter(ParameterSetName = 'Theme')]
+        [switch]$Legacy256Color
     )
 
     # Predefined color themes
     $colorThemes = @{
-        'Sunset'    = @{ Start = '#FF4500'; End = '#FF69B4' } # Orange to Pink
-        'Ocean'     = @{ Start = '#000080'; End = '#00CED1' } # Navy to Dark Turquoise
-        'Forest'    = @{ Start = '#006400'; End = '#90EE90' } # Dark Green to Light Green
-        'Fire'      = @{ Start = '#8B0000'; End = '#FFD700' } # Dark Red to Gold
-        'Purple'    = @{ Start = '#4B0082'; End = '#DDA0DD' } # Indigo to Plum
-        'Grayscale' = @{ Start = '#000000'; End = '#FFFFFF' } # Black to White
-        'Rainbow'   = @{ Start = '#FF0000'; End = '#9400D3' } # Red to Dark Violet
-        'Neon'      = @{ Start = '#00FF00'; End = '#FF00FF' } # Lime to Magenta
-        'Cyberpunk' = @{ Start = '#00FFFF'; End = '#FF1493' } # Cyan to Deep Pink
-        'Pastel'    = @{ Start = '#FFB6C1'; End = '#E0E6FF' } # Light Pink to Lavender
         'Autumn'    = @{ Start = '#8B4513'; End = '#FF8C00' } # Saddle Brown to Dark Orange
-        'Winter'    = @{ Start = '#4682B4'; End = '#B0E0E6' } # Steel Blue to Powder Blue
+        'Best'      = @{ Start = '#FF875F'; End = '#870087' } # Coral to Dark Magenta
+        'Cyberpunk' = @{ Start = '#00FFFF'; End = '#FF1493' } # Cyan to Deep Pink
+        'Fire'      = @{ Start = '#8B0000'; End = '#FFD700' } # Dark Red to Gold
+        'Forest'    = @{ Start = '#006400'; End = '#90EE90' } # Dark Green to Light Green
+        'Grayscale' = @{ Start = '#000000'; End = '#FFFFFF' } # Black to White
+        'Neon'      = @{ Start = '#00FF00'; End = '#FF00FF' } # Lime to Magenta
+        'Ocean'     = @{ Start = '#000080'; End = '#00CED1' } # Navy to Dark Turquoise
+        'Pastel'    = @{ Start = '#FFB6C1'; End = '#E0E6FF' } # Light Pink to Lavender
+        'Purple'    = @{ Start = '#4B0082'; End = '#DDA0DD' } # Indigo to Plum
+        'Rainbow'   = @{ Start = '#FF0000'; End = '#9400D3' } # Red to Dark Violet
         'Spring'    = @{ Start = '#32CD32'; End = '#FFB6C1' } # Lime Green to Light Pink
         'Summer'    = @{ Start = '#FFD700'; End = '#00BFFF' } # Gold to Deep Sky Blue
-        'Best'      = @{ Start = '#FF875F'; End = '#870087' } # Coral to Dark Magenta
+        'Sunset'    = @{ Start = '#FF4500'; End = '#FF69B4' } # Orange to Pink
+        'Winter'    = @{ Start = '#4682B4'; End = '#B0E0E6' } # Steel Blue to Powder Blue
     }
 
     # If using a theme, get the colors from the theme
@@ -315,16 +322,30 @@ function Get-GradientColors {
         $currentG = [Math]::Round($startRGB.G + ($endRGB.G - $startRGB.G) * $factor)
         $currentB = [Math]::Round($startRGB.B + ($endRGB.B - $startRGB.B) * $factor)
         
-        # Convert to ANSI and add to array
-        $ansiColor = ConvertTo-ANSI256 -R $currentR -G $currentG -B $currentB
-        $gradientColors += $ansiColor
+        if ($Legacy256Color) {
+            # Convert to ANSI 256-color code for legacy mode
+            $ansiColor = ConvertTo-ANSI256 -R $currentR -G $currentG -B $currentB
+            $gradientColors += $ansiColor
+        } else {
+            # Use 24-bit true color RGB values
+            $rgbColor = @{ R = $currentR; G = $currentG; B = $currentB }
+            $gradientColors += $rgbColor
+        }
         
         # Store info for preview
         $closestColorName = Find-ClosestColorName -R $currentR -G $currentG -B $currentB
-        $gradientInfo += @{
-            ANSI      = $ansiColor
-            ColorName = $closestColorName
-            RGB       = @{ R = $currentR; G = $currentG; B = $currentB }
+        if ($Legacy256Color) {
+            $gradientInfo += @{
+                ANSI      = $ansiColor
+                ColorName = $closestColorName
+                RGB       = @{ R = $currentR; G = $currentG; B = $currentB }
+            }
+        } else {
+            $gradientInfo += @{
+                RGB       = @{ R = $currentR; G = $currentG; B = $currentB }
+                ColorName = $closestColorName
+                TrueColor = "38;2;$currentR;$currentG;$currentB"
+            }
         }
     }
 
@@ -338,15 +359,24 @@ function Get-GradientColors {
         
         for ($i = 0; $i -lt $gradientColors.Count; $i++) {
             $info = $gradientInfo[$i]
-            $color = $info.ANSI
             $colorName = $info.ColorName.PadRight($maxColorNameLength)
             
-            # Create the preview block with inverted text inside and ANSI code beside
+            # Create the preview block
             $block = "████████████"  # 12 block characters
-            $invertedText = "`e[48;5;${color};30m $colorName `e[0m"  # Black text on color background
-            $ansiCode = "`e[38;5;${color}m$block`e[0m"  # Colored block
             
-            Write-Host "$ansiCode $invertedText ANSI: $color"
+            if ($Legacy256Color) {
+                $color = $info.ANSI
+                $invertedText = "`e[48;5;${color};30m $colorName `e[0m"  # Black text on color background
+                $ansiCode = "`e[38;5;${color}m$block`e[0m"  # Colored block
+                Write-Host "$ansiCode $invertedText ANSI: $color"
+            } else {
+                $rgb = $info.RGB
+                $trueColorCode = $info.TrueColor
+                $invertedText = "`e[48;2;$($rgb.R);$($rgb.G);$($rgb.B);30m $colorName `e[0m"  # Black text on RGB background
+                $rgbCode = "`e[${trueColorCode}m$block`e[0m"  # True color block
+                $hexColor = "#{0:X2}{1:X2}{2:X2}" -f [int]$rgb.R, [int]$rgb.G, [int]$rgb.B
+                Write-Host "$rgbCode $invertedText RGB: $($rgb.R),$($rgb.G),$($rgb.B) ($hexColor)"
+            }
         }
         
         Write-Host ""

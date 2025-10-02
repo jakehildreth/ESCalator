@@ -26,7 +26,7 @@ function Start-ESCalator {
 
     # Select random theme colors once at the start of the session
     $sessionColors = Get-GradientColors -Theme "Random" -Steps 5
-    Write-Verbose "Session theme colors selected: $($sessionColors -join ', ')"
+    Write-Verbose "Session theme colors selected: $($sessionColors | ForEach-Object { "RGB($($_.R),$($_.G),$($_.B))" } | Join-String -Separator ', ')"
 
     # Show the ESCalator header with consistent session colors
     Show-ESCalatorHeader -Color1 $sessionColors[0] -Color2 $sessionColors[1] -Color3 $sessionColors[2] -Color4 $sessionColors[3] -Color5 $sessionColors[4]
@@ -121,20 +121,6 @@ function Start-ESCalator {
         Write-Host "   ✅ Successfully attached issues to principals" -ForegroundColor Green
     } catch {
         Write-Host "   ❌ Failed to attach issues to principals: $($_.Exception.Message)" -ForegroundColor Red
-    }
-    
-    # Find ESC Issue Combinations
-    Write-Host "🎯 Analyzing ESC Issue Combinations..." -ForegroundColor Yellow
-    try {
-        $IssueCombos = Find-IssueCombos -Issues $OriginalIssues, $ExpandedIssues
-        if ($IssueCombos) {
-            Write-Host "   ✅ Found $($IssueCombos.Count) ESC issue combination attacks!" -ForegroundColor Green
-        } else {
-            Write-Host "   ℹ️ No ESC issue combination attacks found" -ForegroundColor Blue
-        }
-    } catch {
-        Write-Host "   ❌ Failed to analyze issue combinations: $($_.Exception.Message)" -ForegroundColor Red
-        $IssueCombos = @()
     }
     
     Write-Host ""

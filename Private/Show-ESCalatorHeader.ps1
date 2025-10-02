@@ -1,54 +1,66 @@
 function Show-ESCalatorHeader {
     <#
         .SYNOPSIS
-        Displays the ESCalator logo and information header with gradient colors.
+        Displays the ESCalator logo and information header with 24-bit true color gradients.
 
         .DESCRIPTION
-        Shows the gradient ESCalator logo and information box using the provided color scheme.
+        Shows the gradient ESCalator logo and information box using the provided RGB color scheme.
+        Colors should be RGB objects with R, G, B properties. Use Get-GradientColors (default mode)
+        to generate compatible color arrays.
 
         .PARAMETER Color1
-        First gradient color (ANSI code)
+        First gradient color (RGB object with R, G, B properties)
 
         .PARAMETER Color2
-        Second gradient color (ANSI code)
+        Second gradient color (RGB object with R, G, B properties)
 
         .PARAMETER Color3
-        Third gradient color (ANSI code)
+        Third gradient color (RGB object with R, G, B properties)
 
         .PARAMETER Color4
-        Fourth gradient color (ANSI code)
+        Fourth gradient color (RGB object with R, G, B properties)
 
         .PARAMETER Color5
-        Fifth gradient color (ANSI code)
+        Fifth gradient color (RGB object with R, G, B properties)
+
+        .EXAMPLE
+        $colors = Get-GradientColors -Theme "Ocean" -Steps 5
+        Show-ESCalatorHeader -Color1 $colors[0] -Color2 $colors[1] -Color3 $colors[2] -Color4 $colors[3] -Color5 $colors[4]
+
+        .EXAMPLE
+        # Using specific RGB colors
+        $rgb1 = @{R=255; G=69; B=0}
+        $rgb2 = @{R=255; G=105; B=180}
+        Show-ESCalatorHeader -Color1 $rgb1 -Color2 $rgb2 -Color3 $rgb1 -Color4 $rgb2 -Color5 $rgb1
     #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
-        [int]$Color1,
+        [hashtable]$Color1,
         
         [Parameter(Mandatory)]
-        [int]$Color2,
+        [hashtable]$Color2,
         
         [Parameter(Mandatory)]
-        [int]$Color3,
+        [hashtable]$Color3,
         
         [Parameter(Mandatory)]
-        [int]$Color4,
+        [hashtable]$Color4,
         
         [Parameter(Mandatory)]
-        [int]$Color5
+        [hashtable]$Color5
     )
 
     Write-Host ""
-    Write-Host "`e[38;5;${Color1}m█        ███      ████      ████      ███  █████████      ███        ███      ███       ██`e[0m"
-    Write-Host "`e[38;5;${Color2}m█  ████████  ████████  ████  ██  ████  ██  ████████  ████  █████  █████  ████  ██  ████  █`e[0m"
-    Write-Host "`e[38;5;${Color3}m█      █████      ███  ████████  ████  ██  ████████  ████  █████  █████  ████  ██       ██`e[0m"
-    Write-Host "`e[38;5;${Color4}m█  ██████████████  ██  ████  ██        ██  ████████        █████  █████  ████  ██  ███  ██`e[0m"
-    Write-Host "`e[38;5;${Color5}m█        ███      ████      ███  ████  ██        ██  ████  █████  ██████      ███  ████  █`e[0m"
-    Write-Host "`e[38;5;${Color5}m                 ╔══════════════════════════════════════════════════╗`e[0m"
-    Write-Host "`e[38;5;${Color4}m                 ║`e[0m AD CS Issue Combo Identification and Attack Tool `e[38;5;${Color4}m║`e[0m"
-    Write-Host "`e[38;5;${Color3}m                 ║`e[0m               (c) 2025 Jake Hildreth             `e[38;5;${Color3}m║`e[0m"
-    Write-Host "`e[38;5;${Color2}m                 ║`e[0m           `e[1mFOR EDUCATIONAL PURPOSES ONLY`e[0m          `e[38;5;${Color2}m║`e[0m"
-    Write-Host "`e[38;5;${Color1}m                 ╚══════════════════════════════════════════════════╝`e[0m"
+    Write-Host "`e[38;2;$($Color1.R);$($Color1.G);$($Color1.B)m█        ███      ████      ████      ███  █████████      ███        ███      ███       ██`e[0m"
+    Write-Host "`e[38;2;$($Color2.R);$($Color2.G);$($Color2.B)m█  ████████  ████████  ████  ██  ████  ██  ████████  ████  █████  █████  ████  ██  ████  █`e[0m"
+    Write-Host "`e[38;2;$($Color3.R);$($Color3.G);$($Color3.B)m█      █████      ███  ████████  ████  ██  ████████  ████  █████  █████  ████  ██       ██`e[0m"
+    Write-Host "`e[38;2;$($Color4.R);$($Color4.G);$($Color4.B)m█  ██████████████  ██  ████  ██        ██  ████████        █████  █████  ████  ██  ███  ██`e[0m"
+    Write-Host "`e[38;2;$($Color5.R);$($Color5.G);$($Color5.B)m█        ███      ████      ███  ████  ██        ██  ████  █████  ██████      ███  ████  █`e[0m"
+    Write-Host "`e[38;2;$($Color5.R);$($Color5.G);$($Color5.B)m                 ╔══════════════════════════════════════════════════╗`e[0m"
+    Write-Host "`e[38;2;$($Color4.R);$($Color4.G);$($Color4.B)m                 ║`e[0m AD CS Issue Combo Identification and Attack Tool `e[38;2;$($Color4.R);$($Color4.G);$($Color4.B)m║`e[0m"
+    Write-Host "`e[38;2;$($Color3.R);$($Color3.G);$($Color3.B)m                 ║`e[0m               (c) 2025 Jake Hildreth             `e[38;2;$($Color3.R);$($Color3.G);$($Color3.B)m║`e[0m"
+    Write-Host "`e[38;2;$($Color2.R);$($Color2.G);$($Color2.B)m                 ║`e[0m           `e[1mFOR EDUCATIONAL PURPOSES ONLY`e[0m          `e[38;2;$($Color2.R);$($Color2.G);$($Color2.B)m║`e[0m"
+    Write-Host "`e[38;2;$($Color1.R);$($Color1.G);$($Color1.B)m                 ╚══════════════════════════════════════════════════╝`e[0m"
     Write-Host ""
 }

@@ -1,18 +1,18 @@
-function Enable-Template {
+function Disable-Template {
     <#
         .SYNOPSIS
-        Enables certificate templates for enrollment by adding them to Certificate Authority configurations.
+        Disables certificate templates for enrollment by removing them from Certificate Authority configurations.
 
         .DESCRIPTION
-        This function takes one or more certificate template names and enables them for enrollment
-        by adding their names to the certificateTemplates attribute on all Certificate Authorities
-        in the current forest. This allows clients to request certificates based on these templates.
+        This function takes one or more certificate template DirectoryEntry objects and disables them for enrollment
+        by removing their names from the certificateTemplates attribute on all Certificate Authorities
+        in the current forest. This prevents clients from requesting certificates based on these templates.
 
         The function uses DirectoryEntry objects to modify the CA configurations without requiring
         the ActiveDirectory PowerShell module.
 
         .PARAMETER Template
-        One or more certificate template DirectoryEntry objects to enable for enrollment.
+        One or more certificate template DirectoryEntry objects to disable for enrollment.
         These should be DirectoryEntry objects representing pKICertificateTemplate objects
         from Active Directory.
 
@@ -25,7 +25,7 @@ function Enable-Template {
 
         .INPUTS
         System.DirectoryServices.DirectoryEntry[]
-        Certificate template DirectoryEntry objects to enable.
+        Certificate template DirectoryEntry objects to disable.
 
         .OUTPUTS
         PSCustomObject[]
@@ -33,24 +33,27 @@ function Enable-Template {
 
         .EXAMPLE
         $Templates = Get-AdcsObjects | Where-Object { $_.ObjectClass -eq 'pKICertificateTemplate' }
-        $UserTemplate = $Templates | Where-Object { $_.Properties['name'].Value -eq 'User' }
-        Enable-Template -Template $UserTemplate
+        $DemoTemplate = $Templates | Where-Object { $_.Properties['name'].Value -eq 'Demo1' }
+        Disable-Template -Template $DemoTemplate
 
         .EXAMPLE
         $Templates = Get-AdcsObjects | Where-Object { $_.ObjectClass -eq 'pKICertificateTemplate' }
-        $Templates | Enable-Template -WhatIf
+        $Templates | Where-Object { $_.Properties['name'].Value -like 'Demo*' } | Disable-Template -WhatIf
 
         .EXAMPLE
         $CAs = Get-AdcsObjects | Where-Object { $_.ObjectClass -eq 'pKIEnrollmentService' }
-        $Template = Get-AdcsObjects | Where-Object { $_.Properties['name'].Value -eq 'WebServer' }
-        Enable-Template -Template $Template -CertificateAuthority $CAs
+        $Template = Get-AdcsObjects | Where-Object { $_.Properties['name'].Value -eq 'CustomTemplate' }
+        Disable-Template -Template $Template -CertificateAuthority $CAs
 
         .LINK
         https://docs.microsoft.com/en-us/windows-server/networking/core-network-guide/cncg/server-certs/configure-the-server-certificate-template
 
         .NOTES
         Requires appropriate permissions to modify Certificate Authority objects in Active Directory.
-        The function will skip templates that are already enabled on each CA.
+        The function will skip templates that are not currently enabled on each CA.
+        
+        WARNING: Disabling templates will prevent certificate enrollment using those templates.
+        Ensure this is the intended behavior before proceeding.
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param (
@@ -145,9 +148,9 @@ function Enable-Template {
                     
                     Write-Verbose "Current templates on $caName : $($currentTemplates -join ', ')"
                     
-                    # Check if template is already enabled
-                    if ($templateName -in $currentTemplates) {
-                        Write-Verbose "Template '$templateName' is already enabled on CA '$caName'"
+                    # Check if template is currently enabled
+                    if ($templateName -notin $currentTemplates) {
+                        Write-Verbose "Template '$templateName' is not enabled on CA '$caName'"
                         
                         $results += [PSCustomObject]@{
                             Success = $true
@@ -155,22 +158,22 @@ function Enable-Template {
                             CertificateAuthorityDN = $caDN
                             TemplateName = $templateName
                             TemplateDistinguishedName = $templateObj.Properties['distinguishedName'].Value
-                            Action = "Already Enabled"
+                            Action = "Not Enabled"
                             Error = $null
                         }
                         
                         continue
                     }
                     
-                    # Add the template to the certificateTemplates attribute
-                    if ($PSCmdlet.ShouldProcess("$caName", "Enable template '$templateName'")) {
-                        # Add the new template to the list
-                        $ca.Properties['certificateTemplates'].Add($templateName)
+                    # Remove the template from the certificateTemplates attribute
+                    if ($PSCmdlet.ShouldProcess("$caName", "Disable template '$templateName'")) {
+                        # Remove the template from the list
+                        $ca.Properties['certificateTemplates'].Remove($templateName)
                         
                         # Commit the changes
                         $ca.CommitChanges()
                         
-                        Write-Verbose "Successfully enabled template '$templateName' on CA '$caName'"
+                        Write-Verbose "Successfully disabled template '$templateName' on CA '$caName'"
                         
                         $results += [PSCustomObject]@{
                             Success = $true
@@ -178,7 +181,7 @@ function Enable-Template {
                             CertificateAuthorityDN = $caDN
                             TemplateName = $templateName
                             TemplateDistinguishedName = $templateObj.Properties['distinguishedName'].Value
-                            Action = "Enabled"
+                            Action = "Disabled"
                             Error = $null
                         }
                     } else {
@@ -189,13 +192,13 @@ function Enable-Template {
                             CertificateAuthorityDN = $caDN
                             TemplateName = $templateName
                             TemplateDistinguishedName = $templateObj.Properties['distinguishedName'].Value
-                            Action = "Would Enable"
+                            Action = "Would Disable"
                             Error = $null
                         }
                     }
                     
                 } catch {
-                    $errorMsg = "Failed to enable template '$templateName' on CA '$caName': $($_.Exception.Message)"
+                    $errorMsg = "Failed to disable template '$templateName' on CA '$caName': $($_.Exception.Message)"
                     Write-Warning $errorMsg
                     
                     $results += [PSCustomObject]@{
@@ -220,13 +223,13 @@ function Enable-Template {
         }
         
         # Summary
-        $successful = $results | Where-Object { $_.Success -and $_.Action -eq "Enabled" }
-        $alreadyEnabled = $results | Where-Object { $_.Success -and $_.Action -eq "Already Enabled" }
+        $successful = $results | Where-Object { $_.Success -and $_.Action -eq "Disabled" }
+        $notEnabled = $results | Where-Object { $_.Success -and $_.Action -eq "Not Enabled" }
         $failed = $results | Where-Object { -not $_.Success }
         
         Write-Verbose "Summary:"
-        Write-Verbose "  Templates enabled: $($successful.Count)"
-        Write-Verbose "  Templates already enabled: $($alreadyEnabled.Count)"
+        Write-Verbose "  Templates disabled: $($successful.Count)"
+        Write-Verbose "  Templates not enabled: $($notEnabled.Count)"
         Write-Verbose "  Failed operations: $($failed.Count)"
     }
 }

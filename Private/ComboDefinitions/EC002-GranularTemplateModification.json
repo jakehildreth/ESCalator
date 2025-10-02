@@ -1,0 +1,78 @@
+{
+  "id": "EC002",
+  "name": "Granular Template Modification + CA Publishing",
+  "description": "Principal has specific template modification rights and can publish",
+  "metadata": {
+    "version": "1.0",
+    "lastUpdated": "2025-10-02",
+    "category": "Template Modification",
+    "reference": "https://posts.specterops.io/certified-pre-owned-d95910965cd2"
+  },
+  "requiredCapabilities": {
+    "esc4": [
+      {
+        "allOf": [
+          {
+            "anyOf": [
+              "WriteProperty-Template-EnrollmentFlag",
+              "WriteProperty-Template-AllObjects"
+            ]
+          },
+          {
+            "anyOf": [
+              "WriteProperty-Template-PKIExtendedKeyUsage", 
+              "WriteProperty-Template-AllObjects"
+            ]
+          },
+          {
+            "anyOf": [
+              "WriteProperty-Template-CertNameFlag",
+              "WriteProperty-Template-AllObjects"
+            ]
+          }
+        ],
+        "description": "Specific rights to modify critical template attributes"
+      }
+    ],
+    "esc5": [
+      {
+        "anyOf": [
+          "WriteProperty-EnrollmentService-CertTemplatesAttr",
+          "WriteProperty-EnrollmentService-AllObjects",
+          "WriteProperty-EnrollmentService-GenericAll", 
+          "WriteProperty-EnrollmentService-GenericWrite",
+          "Owner-Object"
+        ],
+        "description": "Ability to publish templates to CA"
+      }
+    ]
+  },
+  "steps": [
+    "Identify certificate template with granular WriteProperty permissions",
+    "Modify enrollment flag to disable manager approval",
+    "Add Client Authentication to extended key usage",
+    "Enable subject alternative name specification", 
+    "Publish modified template to Certificate Authority",
+    "Enroll malicious certificate with privileged SAN"
+  ],
+  "templateModifications": [
+    {
+      "attribute": "msPKI-Enrollment-Flag",
+      "action": "Remove CT_FLAG_PEND_ALL_REQUESTS flag",
+      "purpose": "Disable manager approval requirement",
+      "requiredCapability": "WriteProperty-Template-EnrollmentFlag"
+    },
+    {
+      "attribute": "pkiExtendedKeyUsage",
+      "action": "Add Client Authentication (1.3.6.1.5.5.7.3.2)",
+      "purpose": "Enable authentication capabilities",
+      "requiredCapability": "WriteProperty-Template-PKIExtendedKeyUsage"
+    },
+    {
+      "attribute": "msPKI-Certificate-Name-Flag", 
+      "action": "Set CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT_ALT_NAME",
+      "purpose": "Allow subject alternative name specification",
+      "requiredCapability": "WriteProperty-Template-CertNameFlag"
+    }
+  ]
+}

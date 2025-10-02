@@ -54,68 +54,68 @@ function Get-GradientColors {
     param (
         [Parameter(Mandatory, ParameterSetName = 'CustomColors')]
         [ValidateScript({
-            $color = $_.ToLower().Trim()
-            # Allow 'random'
-            if ($color -eq 'random') { return $true }
-            # Allow hex colors
-            if ($color -match '^#[0-9a-f]{6}$') { return $true }
-            # Allow HTML color names - use the same list as defined in the function body
-            $htmlColorNames = @(
-                'aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'azure', 'beige', 'bisque', 'black',
-                'blanchedalmond', 'blue', 'blueviolet', 'brown', 'burlywood', 'cadetblue', 'chartreuse', 'chocolate',
-                'coral', 'cornflowerblue', 'cornsilk', 'crimson', 'cyan', 'darkblue', 'darkcyan', 'darkgoldenrod',
-                'darkgray', 'darkgrey', 'darkgreen', 'darkkhaki', 'darkmagenta', 'darkolivegreen', 'darkorange', 'darkorchid',
-                'darkred', 'darksalmon', 'darkseagreen', 'darkslateblue', 'darkslategray', 'darkslategrey', 'darkturquoise', 'darkviolet',
-                'deeppink', 'deepskyblue', 'dimgray', 'dimgrey', 'dodgerblue', 'firebrick', 'floralwhite', 'forestgreen',
-                'fuchsia', 'gainsboro', 'ghostwhite', 'gold', 'goldenrod', 'gray', 'grey', 'green',
-                'greenyellow', 'honeydew', 'hotpink', 'indianred', 'indigo', 'ivory', 'khaki', 'lavender',
-                'lavenderblush', 'lawngreen', 'lemonchiffon', 'lightblue', 'lightcoral', 'lightcyan', 'lightgoldenrodyellow', 'lightgray',
-                'lightgrey', 'lightgreen', 'lightpink', 'lightsalmon', 'lightseagreen', 'lightskyblue', 'lightslategray', 'lightslategrey',
-                'lightsteelblue', 'lightyellow', 'lime', 'limegreen', 'linen', 'magenta', 'maroon', 'mediumaquamarine',
-                'mediumblue', 'mediumorchid', 'mediumpurple', 'mediumseagreen', 'mediumslateblue', 'mediumspringgreen', 'mediumturquoise', 'mediumvioletred',
-                'midnightblue', 'mintcream', 'mistyrose', 'moccasin', 'navajowhite', 'navy', 'oldlace', 'olive',
-                'olivedrab', 'orange', 'orangered', 'orchid', 'palegoldenrod', 'palegreen', 'paleturquoise', 'palevioletred',
-                'papayawhip', 'peachpuff', 'peru', 'pink', 'plum', 'powderblue', 'purple', 'red',
-                'rosybrown', 'royalblue', 'saddlebrown', 'salmon', 'sandybrown', 'seagreen', 'seashell', 'sienna',
-                'silver', 'skyblue', 'slateblue', 'slategray', 'slategrey', 'snow', 'springgreen', 'steelblue',
-                'tan', 'teal', 'thistle', 'tomato', 'turquoise', 'violet', 'wheat', 'white', 'whitesmoke', 'yellow', 'yellowgreen'
-            )
-            if ($htmlColorNames -contains $color) { return $true }
-            throw "Invalid color: '$_'. Must be a valid hex color (#RRGGBB), HTML color name, or 'Random'."
-        })]
+                $color = $_.ToLower().Trim()
+                # Allow 'random'
+                if ($color -eq 'random') { return $true }
+                # Allow hex colors
+                if ($color -match '^#[0-9a-f]{6}$') { return $true }
+                # Allow HTML color names - use the same list as defined in the function body
+                $htmlColorNames = @(
+                    'aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'azure', 'beige', 'bisque', 'black',
+                    'blanchedalmond', 'blue', 'blueviolet', 'brown', 'burlywood', 'cadetblue', 'chartreuse', 'chocolate',
+                    'coral', 'cornflowerblue', 'cornsilk', 'crimson', 'cyan', 'darkblue', 'darkcyan', 'darkgoldenrod',
+                    'darkgray', 'darkgrey', 'darkgreen', 'darkkhaki', 'darkmagenta', 'darkolivegreen', 'darkorange', 'darkorchid',
+                    'darkred', 'darksalmon', 'darkseagreen', 'darkslateblue', 'darkslategray', 'darkslategrey', 'darkturquoise', 'darkviolet',
+                    'deeppink', 'deepskyblue', 'dimgray', 'dimgrey', 'dodgerblue', 'firebrick', 'floralwhite', 'forestgreen',
+                    'fuchsia', 'gainsboro', 'ghostwhite', 'gold', 'goldenrod', 'gray', 'grey', 'green',
+                    'greenyellow', 'honeydew', 'hotpink', 'indianred', 'indigo', 'ivory', 'khaki', 'lavender',
+                    'lavenderblush', 'lawngreen', 'lemonchiffon', 'lightblue', 'lightcoral', 'lightcyan', 'lightgoldenrodyellow', 'lightgray',
+                    'lightgrey', 'lightgreen', 'lightpink', 'lightsalmon', 'lightseagreen', 'lightskyblue', 'lightslategray', 'lightslategrey',
+                    'lightsteelblue', 'lightyellow', 'lime', 'limegreen', 'linen', 'magenta', 'maroon', 'mediumaquamarine',
+                    'mediumblue', 'mediumorchid', 'mediumpurple', 'mediumseagreen', 'mediumslateblue', 'mediumspringgreen', 'mediumturquoise', 'mediumvioletred',
+                    'midnightblue', 'mintcream', 'mistyrose', 'moccasin', 'navajowhite', 'navy', 'oldlace', 'olive',
+                    'olivedrab', 'orange', 'orangered', 'orchid', 'palegoldenrod', 'palegreen', 'paleturquoise', 'palevioletred',
+                    'papayawhip', 'peachpuff', 'peru', 'pink', 'plum', 'powderblue', 'purple', 'red',
+                    'rosybrown', 'royalblue', 'saddlebrown', 'salmon', 'sandybrown', 'seagreen', 'seashell', 'sienna',
+                    'silver', 'skyblue', 'slateblue', 'slategray', 'slategrey', 'snow', 'springgreen', 'steelblue',
+                    'tan', 'teal', 'thistle', 'tomato', 'turquoise', 'violet', 'wheat', 'white', 'whitesmoke', 'yellow', 'yellowgreen'
+                )
+                if ($htmlColorNames -contains $color) { return $true }
+                throw "Invalid color: '$_'. Must be a valid hex color (#RRGGBB), HTML color name, or 'Random'."
+            })]
         [string]$StartColor,
         
         [Parameter(Mandatory, ParameterSetName = 'CustomColors')]
         [ValidateScript({
-            $color = $_.ToLower().Trim()
-            # Allow 'random'
-            if ($color -eq 'random') { return $true }
-            # Allow hex colors
-            if ($color -match '^#[0-9a-f]{6}$') { return $true }
-            # Allow HTML color names - use the same list as defined in the function body
-            $htmlColorNames = @(
-                'aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'azure', 'beige', 'bisque', 'black',
-                'blanchedalmond', 'blue', 'blueviolet', 'brown', 'burlywood', 'cadetblue', 'chartreuse', 'chocolate',
-                'coral', 'cornflowerblue', 'cornsilk', 'crimson', 'cyan', 'darkblue', 'darkcyan', 'darkgoldenrod',
-                'darkgray', 'darkgrey', 'darkgreen', 'darkkhaki', 'darkmagenta', 'darkolivegreen', 'darkorange', 'darkorchid',
-                'darkred', 'darksalmon', 'darkseagreen', 'darkslateblue', 'darkslategray', 'darkslategrey', 'darkturquoise', 'darkviolet',
-                'deeppink', 'deepskyblue', 'dimgray', 'dimgrey', 'dodgerblue', 'firebrick', 'floralwhite', 'forestgreen',
-                'fuchsia', 'gainsboro', 'ghostwhite', 'gold', 'goldenrod', 'gray', 'grey', 'green',
-                'greenyellow', 'honeydew', 'hotpink', 'indianred', 'indigo', 'ivory', 'khaki', 'lavender',
-                'lavenderblush', 'lawngreen', 'lemonchiffon', 'lightblue', 'lightcoral', 'lightcyan', 'lightgoldenrodyellow', 'lightgray',
-                'lightgrey', 'lightgreen', 'lightpink', 'lightsalmon', 'lightseagreen', 'lightskyblue', 'lightslategray', 'lightslategrey',
-                'lightsteelblue', 'lightyellow', 'lime', 'limegreen', 'linen', 'magenta', 'maroon', 'mediumaquamarine',
-                'mediumblue', 'mediumorchid', 'mediumpurple', 'mediumseagreen', 'mediumslateblue', 'mediumspringgreen', 'mediumturquoise', 'mediumvioletred',
-                'midnightblue', 'mintcream', 'mistyrose', 'moccasin', 'navajowhite', 'navy', 'oldlace', 'olive',
-                'olivedrab', 'orange', 'orangered', 'orchid', 'palegoldenrod', 'palegreen', 'paleturquoise', 'palevioletred',
-                'papayawhip', 'peachpuff', 'peru', 'pink', 'plum', 'powderblue', 'purple', 'red',
-                'rosybrown', 'royalblue', 'saddlebrown', 'salmon', 'sandybrown', 'seagreen', 'seashell', 'sienna',
-                'silver', 'skyblue', 'slateblue', 'slategray', 'slategrey', 'snow', 'springgreen', 'steelblue',
-                'tan', 'teal', 'thistle', 'tomato', 'turquoise', 'violet', 'wheat', 'white', 'whitesmoke', 'yellow', 'yellowgreen'
-            )
-            if ($htmlColorNames -contains $color) { return $true }
-            throw "Invalid color: '$_'. Must be a valid hex color (#RRGGBB), HTML color name, or 'Random'."
-        })]
+                $color = $_.ToLower().Trim()
+                # Allow 'random'
+                if ($color -eq 'random') { return $true }
+                # Allow hex colors
+                if ($color -match '^#[0-9a-f]{6}$') { return $true }
+                # Allow HTML color names - use the same list as defined in the function body
+                $htmlColorNames = @(
+                    'aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'azure', 'beige', 'bisque', 'black',
+                    'blanchedalmond', 'blue', 'blueviolet', 'brown', 'burlywood', 'cadetblue', 'chartreuse', 'chocolate',
+                    'coral', 'cornflowerblue', 'cornsilk', 'crimson', 'cyan', 'darkblue', 'darkcyan', 'darkgoldenrod',
+                    'darkgray', 'darkgrey', 'darkgreen', 'darkkhaki', 'darkmagenta', 'darkolivegreen', 'darkorange', 'darkorchid',
+                    'darkred', 'darksalmon', 'darkseagreen', 'darkslateblue', 'darkslategray', 'darkslategrey', 'darkturquoise', 'darkviolet',
+                    'deeppink', 'deepskyblue', 'dimgray', 'dimgrey', 'dodgerblue', 'firebrick', 'floralwhite', 'forestgreen',
+                    'fuchsia', 'gainsboro', 'ghostwhite', 'gold', 'goldenrod', 'gray', 'grey', 'green',
+                    'greenyellow', 'honeydew', 'hotpink', 'indianred', 'indigo', 'ivory', 'khaki', 'lavender',
+                    'lavenderblush', 'lawngreen', 'lemonchiffon', 'lightblue', 'lightcoral', 'lightcyan', 'lightgoldenrodyellow', 'lightgray',
+                    'lightgrey', 'lightgreen', 'lightpink', 'lightsalmon', 'lightseagreen', 'lightskyblue', 'lightslategray', 'lightslategrey',
+                    'lightsteelblue', 'lightyellow', 'lime', 'limegreen', 'linen', 'magenta', 'maroon', 'mediumaquamarine',
+                    'mediumblue', 'mediumorchid', 'mediumpurple', 'mediumseagreen', 'mediumslateblue', 'mediumspringgreen', 'mediumturquoise', 'mediumvioletred',
+                    'midnightblue', 'mintcream', 'mistyrose', 'moccasin', 'navajowhite', 'navy', 'oldlace', 'olive',
+                    'olivedrab', 'orange', 'orangered', 'orchid', 'palegoldenrod', 'palegreen', 'paleturquoise', 'palevioletred',
+                    'papayawhip', 'peachpuff', 'peru', 'pink', 'plum', 'powderblue', 'purple', 'red',
+                    'rosybrown', 'royalblue', 'saddlebrown', 'salmon', 'sandybrown', 'seagreen', 'seashell', 'sienna',
+                    'silver', 'skyblue', 'slateblue', 'slategray', 'slategrey', 'snow', 'springgreen', 'steelblue',
+                    'tan', 'teal', 'thistle', 'tomato', 'turquoise', 'violet', 'wheat', 'white', 'whitesmoke', 'yellow', 'yellowgreen'
+                )
+                if ($htmlColorNames -contains $color) { return $true }
+                throw "Invalid color: '$_'. Must be a valid hex color (#RRGGBB), HTML color name, or 'Random'."
+            })]
         [string]$EndColor,
         
         [Parameter(Mandatory, ParameterSetName = 'CustomColors')]
@@ -138,20 +138,21 @@ function Get-GradientColors {
 
     # Predefined color themes
     $colorThemes = @{
-        'Sunset' = @{ Start = '#FF4500'; End = '#FF69B4' }      # Orange to Pink
-        'Ocean' = @{ Start = '#000080'; End = '#00CED1' }       # Navy to Dark Turquoise
-        'Forest' = @{ Start = '#006400'; End = '#90EE90' }      # Dark Green to Light Green
-        'Fire' = @{ Start = '#8B0000'; End = '#FFD700' }        # Dark Red to Gold
-        'Purple' = @{ Start = '#4B0082'; End = '#DDA0DD' }      # Indigo to Plum
-        'Grayscale' = @{ Start = '#000000'; End = '#FFFFFF' }   # Black to White
-        'Rainbow' = @{ Start = '#FF0000'; End = '#9400D3' }     # Red to Dark Violet
-        'Neon' = @{ Start = '#00FF00'; End = '#FF00FF' }        # Lime to Magenta
-        'Cyberpunk' = @{ Start = '#00FFFF'; End = '#FF1493' }   # Cyan to Deep Pink
-        'Pastel' = @{ Start = '#FFB6C1'; End = '#E0E6FF' }      # Light Pink to Lavender
-        'Autumn' = @{ Start = '#8B4513'; End = '#FF8C00' }      # Saddle Brown to Dark Orange
-        'Winter' = @{ Start = '#4682B4'; End = '#B0E0E6' }      # Steel Blue to Powder Blue
-        'Spring' = @{ Start = '#32CD32'; End = '#FFB6C1' }      # Lime Green to Light Pink
-        'Summer' = @{ Start = '#FFD700'; End = '#00BFFF' }      # Gold to Deep Sky Blue
+        'Sunset'    = @{ Start = '#FF4500'; End = '#FF69B4' } # Orange to Pink
+        'Ocean'     = @{ Start = '#000080'; End = '#00CED1' } # Navy to Dark Turquoise
+        'Forest'    = @{ Start = '#006400'; End = '#90EE90' } # Dark Green to Light Green
+        'Fire'      = @{ Start = '#8B0000'; End = '#FFD700' } # Dark Red to Gold
+        'Purple'    = @{ Start = '#4B0082'; End = '#DDA0DD' } # Indigo to Plum
+        'Grayscale' = @{ Start = '#000000'; End = '#FFFFFF' } # Black to White
+        'Rainbow'   = @{ Start = '#FF0000'; End = '#9400D3' } # Red to Dark Violet
+        'Neon'      = @{ Start = '#00FF00'; End = '#FF00FF' } # Lime to Magenta
+        'Cyberpunk' = @{ Start = '#00FFFF'; End = '#FF1493' } # Cyan to Deep Pink
+        'Pastel'    = @{ Start = '#FFB6C1'; End = '#E0E6FF' } # Light Pink to Lavender
+        'Autumn'    = @{ Start = '#8B4513'; End = '#FF8C00' } # Saddle Brown to Dark Orange
+        'Winter'    = @{ Start = '#4682B4'; End = '#B0E0E6' } # Steel Blue to Powder Blue
+        'Spring'    = @{ Start = '#32CD32'; End = '#FFB6C1' } # Lime Green to Light Pink
+        'Summer'    = @{ Start = '#FFD700'; End = '#00BFFF' } # Gold to Deep Sky Blue
+        'Best'      = @{ Start = '#FF875F'; End = '#870087' } # Coral to Dark Magenta
     }
 
     # If using a theme, get the colors from the theme
@@ -321,9 +322,9 @@ function Get-GradientColors {
         # Store info for preview
         $closestColorName = Find-ClosestColorName -R $currentR -G $currentG -B $currentB
         $gradientInfo += @{
-            ANSI = $ansiColor
+            ANSI      = $ansiColor
             ColorName = $closestColorName
-            RGB = @{ R = $currentR; G = $currentG; B = $currentB }
+            RGB       = @{ R = $currentR; G = $currentG; B = $currentB }
         }
     }
 

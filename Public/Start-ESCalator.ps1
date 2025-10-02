@@ -40,7 +40,7 @@ function Start-ESCalator {
         )
         
         # Display the simple menu
-        Show-MenuOptions -Title "Select Attack Combos to Display:" -Options $menuOptions
+        Show-MenuOptions -Title "Select Issue Combos to Display:" -Options $menuOptions
         
         # Get user choice with validation
         $choice = Get-MenuChoice -MaxOption 3 -Prompt "Select an option"

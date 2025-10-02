@@ -115,15 +115,15 @@ function Start-ESCalator {
     # Find ESC Issue Combinations
     Write-Host "🎯 Analyzing ESC Issue Combinations..." -ForegroundColor Yellow
     try {
-        $IssueCombinations = Find-IssueCombinations -Issues $OriginalIssues, $ExpandedIssues
-        if ($IssueCombinations) {
-            Write-Host "   ✅ Found $($IssueCombinations.Count) ESC issue combination attacks!" -ForegroundColor Green
+        $IssueCombos = Find-IssueCombos -Issues $OriginalIssues, $ExpandedIssues
+        if ($IssueCombos) {
+            Write-Host "   ✅ Found $($IssueCombos.Count) ESC issue combination attacks!" -ForegroundColor Green
         } else {
             Write-Host "   ℹ️ No ESC issue combination attacks found" -ForegroundColor Blue
         }
     } catch {
         Write-Host "   ❌ Failed to analyze issue combinations: $($_.Exception.Message)" -ForegroundColor Red
-        $IssueCombinations = @()
+        $IssueCombos = @()
     }
     
     Write-Host ""

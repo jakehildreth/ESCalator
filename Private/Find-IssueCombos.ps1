@@ -1,4 +1,4 @@
-function Find-IssueCombinations {
+function Find-IssueCombos {
     <#
         .SYNOPSIS
         Identifies principals capable of creating ESC1 vulnerable certificate templates through AD CS issue combinations.
@@ -13,7 +13,7 @@ function Find-IssueCombinations {
         Supports multiple arrays that will be automatically flattened.
 
         .PARAMETER ConfigPath
-        Path to the ESC issue combinations configuration file. Defaults to IssueCombinations directory.
+        Path to the ESC issue combinations configuration file. Defaults to IssueCombos directory.
 
         .PARAMETER IncludePartialChains
         Include principals with partial issue combination capabilities (may require additional access).
@@ -29,8 +29,8 @@ function Find-IssueCombinations {
         Each output object contains:
         - PrincipalName: The principal (user/group) name
         - PrincipalSID: The principal's security identifier
-        - IssueCombinationId: ID of the issue combination the principal can execute
-        - IssueCombinationName: Descriptive name of the issue combination
+        - IssueComboId: ID of the issue combination the principal can execute
+        - IssueComboName: Descriptive name of the issue combination
         - ESC4Capabilities: Array of ESC4 capabilities the principal has
         - ESC5Capabilities: Array of ESC5 capabilities the principal has
         - AffectedTemplates: Certificate templates the principal can modify
@@ -41,17 +41,17 @@ function Find-IssueCombinations {
 
         .EXAMPLE
         $AllIssues = @(Find-ESC4 -AdcsObjects $AdcsObjects; Find-ESC5 -AdcsObjects $AdcsObjects)
-        $IssueCombinations = Find-IssueCombinations -Issues $AllIssues
-        $IssueCombinations | Format-Table PrincipalName, IssueCombinationName
+        $IssueCombos = Find-IssueCombos -Issues $AllIssues
+        $IssueCombos | Format-Table PrincipalName, IssueComboName
         
         .EXAMPLE
         # Include partial capabilities
-        $AllCombinations = Find-IssueCombinations -Issues $AllIssues -IncludePartialChains
+        $AllCombinations = Find-IssueCombos -Issues $AllIssues -IncludePartialChains
 
         .EXAMPLE
         # Analyze specific principal's capabilities
-        $UserCombinations = Find-IssueCombinations -Issues $AllIssues | Where-Object { $_.PrincipalName -like "*john.doe*" }
-        $UserCombinations | Select-Object IssueCombinationName, ESC4Capabilities, ESC5Capabilities, Steps
+        $UserCombinations = Find-IssueCombos -Issues $AllIssues | Where-Object { $_.PrincipalName -like "*john.doe*" }
+        $UserCombinations | Select-Object IssueComboName, ESC4Capabilities, ESC5Capabilities, Steps
 
         .LINK
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
@@ -86,27 +86,27 @@ function Find-IssueCombinations {
         }
         
         # Load individual issue combination files
-        $IssueCombinationFiles = Get-ChildItem -Path $ConfigPath -Filter "EC*.json"
-        if ($IssueCombinationFiles.Count -eq 0) {
+        $IssueComboFiles = Get-ChildItem -Path $ConfigPath -Filter "EC*.json"
+        if ($IssueComboFiles.Count -eq 0) {
             throw "No issue combination files found in: $ConfigPath"
         }
         
-        $IssueCombinations = @()
-        foreach ($File in $IssueCombinationFiles) {
+        $IssueCombos = @()
+        foreach ($File in $IssueComboFiles) {
             try {
                 $Combination = Get-Content $File.FullName -Raw | ConvertFrom-Json
-                $IssueCombinations += $Combination
+                $IssueCombos += $Combination
                 Write-Verbose "Loaded issue combination: $($Combination.id) - $($Combination.name)"
             } catch {
                 Write-Warning "Failed to load issue combination file $($File.Name): $_"
             }
         }
         
-        if ($IssueCombinations.Count -eq 0) {
+        if ($IssueCombos.Count -eq 0) {
             throw "No valid issue combination configurations loaded"
         }
         
-        Write-Verbose "Loaded $($IssueCombinations.Count) issue combination configurations"
+        Write-Verbose "Loaded $($IssueCombos.Count) issue combination configurations"
         
         # Flatten any nested arrays and validate all items are ESCalatorIssue objects
         $AllIssues = @()
@@ -170,27 +170,27 @@ function Find-IssueCombinations {
             Write-Verbose "Analyzing principal $PrincipalName with $($ESC4Capabilities.Count) ESC4 and $($ESC5Capabilities.Count) ESC5 capabilities"
             
             # Test each issue combination
-            foreach ($IssueCombination in $IssueCombinations) {
-                $CanExecuteChain = Test-IssueCombinationCapabilities -IssueCombination $IssueCombination -ESC4Capabilities $ESC4Capabilities -ESC5Capabilities $ESC5Capabilities -IncludePartialChains:$IncludePartialChains
+            foreach ($IssueCombo in $IssueCombos) {
+                $CanExecuteChain = Test-IssueComboCapabilities -IssueCombo $IssueCombo -ESC4Capabilities $ESC4Capabilities -ESC5Capabilities $ESC5Capabilities -IncludePartialChains:$IncludePartialChains
                 
                 if ($CanExecuteChain.CanExecute) {
-                    Write-Verbose "Principal $PrincipalName can execute issue combination $($IssueCombination.id): $($IssueCombination.name)"
+                    Write-Verbose "Principal $PrincipalName can execute issue combination $($IssueCombo.id): $($IssueCombo.name)"
                     
                     [PSCustomObject]@{
                         PrincipalName = $PrincipalName
                         PrincipalSID = $PrincipalSID
-                        IssueCombinationId = $IssueCombination.id
-                        IssueCombinationName = $IssueCombination.name
-                        IssueCombinationDescription = $IssueCombination.description
+                        IssueComboId = $IssueCombo.id
+                        IssueComboName = $IssueCombo.name
+                        IssueComboDescription = $IssueCombo.description
                         ESC4Capabilities = $ESC4Capabilities
                         ESC5Capabilities = $ESC5Capabilities
                         AffectedTemplates = $AffectedTemplates
                         AffectedCAs = $AffectedCAs
-                        Steps = $IssueCombination.steps
+                        Steps = $IssueCombo.steps
                         IsExpandedFromGroup = $IsExpandedFromGroup
                         ExpandedFromGroup = $ExpandedFromGroup
                         CapabilityAnalysis = $CanExecuteChain.Analysis
-                        RequiredCapabilities = $IssueCombination.requiredCapabilities
+                        RequiredCapabilities = $IssueCombo.requiredCapabilities
                     }
                 }
             }
@@ -202,7 +202,7 @@ function Find-IssueCombinations {
     }
 }
 
-function Test-IssueCombinationCapabilities {
+function Test-IssueComboCapabilities {
     <#
         .SYNOPSIS
         Tests if a principal has the required capabilities for a specific issue combination.
@@ -213,7 +213,7 @@ function Test-IssueCombinationCapabilities {
     #>
     param (
         [Parameter(Mandatory)]
-        [object]$IssueCombination,
+        [object]$IssueCombo,
         
         [Parameter(Mandatory)]
         [AllowEmptyCollection()]
@@ -238,8 +238,8 @@ function Test-IssueCombinationCapabilities {
     $AllRequirementsMet = $true
     
     # Check ESC4 requirements
-    if ($IssueCombination.requiredCapabilities.esc4) {
-        foreach ($Requirement in $IssueCombination.requiredCapabilities.esc4) {
+    if ($IssueCombo.requiredCapabilities.esc4) {
+        foreach ($Requirement in $IssueCombo.requiredCapabilities.esc4) {
             $Analysis.TotalRequirements++
             $RequirementMet = $false
             
@@ -300,8 +300,8 @@ function Test-IssueCombinationCapabilities {
     }
     
     # Check ESC5 requirements
-    if ($IssueCombination.requiredCapabilities.esc5) {
-        foreach ($Requirement in $IssueCombination.requiredCapabilities.esc5) {
+    if ($IssueCombo.requiredCapabilities.esc5) {
+        foreach ($Requirement in $IssueCombo.requiredCapabilities.esc5) {
             $Analysis.TotalRequirements++
             $RequirementMet = $false
             

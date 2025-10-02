@@ -1,4 +1,4 @@
-function Get-IssueCombinationReport {
+function Get-IssueComboReport {
     <#
         .SYNOPSIS
         Generates comprehensive reports from ESC issue combination analysis results.
@@ -7,8 +7,8 @@ function Get-IssueCombinationReport {
         This function takes ESC issue combination analysis results and generates various report formats
         including summary statistics, detailed principal analysis, and capability breakdowns.
 
-        .PARAMETER IssueCombinations
-        Array of issue combination objects from Find-IssueCombinations.
+        .PARAMETER IssueCombos
+        Array of issue combination objects from Find-IssueCombos.
 
         .PARAMETER ReportType
         Type of report to generate. Valid values: Summary, Detailed, PrincipalFocus, Steps.
@@ -23,19 +23,19 @@ function Get-IssueCombinationReport {
         Optional path to export the report as JSON, CSV, or HTML.
 
         .EXAMPLE
-        $IssueCombinations = Find-IssueCombinations -Issues $AllIssues
-        Get-IssueCombinationReport -IssueCombinations $IssueCombinations -ReportType Summary
+        $IssueCombos = Find-IssueCombos -Issues $AllIssues
+        Get-IssueComboReport -IssueCombos $IssueCombos -ReportType Summary
 
         .EXAMPLE
-        Get-IssueCombinationReport -IssueCombinations $IssueCombinations -ReportType Detailed -GroupByPrincipal -IncludeStatistics
+        Get-IssueComboReport -IssueCombos $IssueCombos -ReportType Detailed -GroupByPrincipal -IncludeStatistics
 
         .EXAMPLE
-        Get-IssueCombinationReport -IssueCombinations $IssueCombinations -ReportType Summary -ExportPath "C:\Reports\ESC-Analysis.json"
+        Get-IssueComboReport -IssueCombos $IssueCombos -ReportType Summary -ExportPath "C:\Reports\ESC-Analysis.json"
     #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [object[]]$IssueCombinations,
+        [object[]]$IssueCombos,
         
         [Parameter()]
         [ValidateSet('Summary', 'Detailed', 'PrincipalFocus', 'Steps')]
@@ -56,7 +56,7 @@ function Get-IssueCombinationReport {
     }
 
     process {
-        $AllCombinations += $IssueCombinations
+        $AllCombinations += $IssueCombos
     }
 
     end {
@@ -64,16 +64,16 @@ function Get-IssueCombinationReport {
         
         $Report = switch ($ReportType) {
             'Summary' { 
-                Get-SummaryReport -IssueCombinations $AllCombinations -IncludeStatistics:$IncludeStatistics
+                Get-SummaryReport -IssueCombos $AllCombinations -IncludeStatistics:$IncludeStatistics
             }
             'Detailed' { 
-                Get-DetailedReport -IssueCombinations $AllCombinations -GroupByPrincipal:$GroupByPrincipal
+                Get-DetailedReport -IssueCombos $AllCombinations -GroupByPrincipal:$GroupByPrincipal
             }
             'PrincipalFocus' { 
-                Get-PrincipalFocusReport -IssueCombinations $AllCombinations
+                Get-PrincipalFocusReport -IssueCombos $AllCombinations
             }
             'Steps' { 
-                Get-StepsReport -IssueCombinations $AllCombinations
+                Get-StepsReport -IssueCombos $AllCombinations
             }
         }
         
@@ -86,33 +86,33 @@ function Get-IssueCombinationReport {
 }
 
 function Get-SummaryReport {
-    param ($IssueCombinations, [switch]$IncludeStatistics)
+    param ($IssueCombos, [switch]$IncludeStatistics)
     
     $Summary = [PSCustomObject]@{
         ReportType = 'ESC Issue Combination Summary'
         GeneratedDate = Get-Date
-        TotalIssueCombinations = $IssueCombinations.Count
-        UniquePrincipals = ($IssueCombinations | Select-Object PrincipalName -Unique).Count
-        UniqueIssueCombinationTypes = ($IssueCombinations | Select-Object IssueCombinationId -Unique).Count
+        TotalIssueCombos = $IssueCombos.Count
+        UniquePrincipals = ($IssueCombos | Select-Object PrincipalName -Unique).Count
+        UniqueIssueComboTypes = ($IssueCombos | Select-Object IssueComboId -Unique).Count
     }
     
     # Top issue combinations by frequency
-    $TopIssueCombinations = $IssueCombinations | Group-Object IssueCombinationName | Sort-Object Count -Descending | Select-Object -First 5 | ForEach-Object {
+    $TopIssueCombos = $IssueCombos | Group-Object IssueComboName | Sort-Object Count -Descending | Select-Object -First 5 | ForEach-Object {
         [PSCustomObject]@{
-            IssueCombinationName = $_.Name
+            IssueComboName = $_.Name
             Count = $_.Count
             UniquePrincipals = ($_.Group | Select-Object PrincipalName -Unique).Count
         }
     }
     
-    $Summary | Add-Member -NotePropertyName "TopIssueCombinations" -NotePropertyValue $TopIssueCombinations
+    $Summary | Add-Member -NotePropertyName "TopIssueCombos" -NotePropertyValue $TopIssueCombos
     
     # Most vulnerable principals
-    $VulnerablePrincipals = $IssueCombinations | Group-Object PrincipalName | Sort-Object Count -Descending | Select-Object -First 10 | ForEach-Object {
+    $VulnerablePrincipals = $IssueCombos | Group-Object PrincipalName | Sort-Object Count -Descending | Select-Object -First 10 | ForEach-Object {
         $PrincipalCombinations = $_.Group
         [PSCustomObject]@{
             PrincipalName = $_.Name
-            IssueCombinationCount = $_.Count
+            IssueComboCount = $_.Count
             IsExpandedFromGroup = ($PrincipalCombinations | Select-Object -First 1).IsExpandedFromGroup
             ExpandedFromGroup = ($PrincipalCombinations | Select-Object -First 1).ExpandedFromGroup
         }
@@ -122,10 +122,10 @@ function Get-SummaryReport {
     
     if ($IncludeStatistics) {
         $Stats = [PSCustomObject]@{
-            ExpandedFromGroupCount = ($IssueCombinations | Where-Object IsExpandedFromGroup).Count
-            DirectPrincipalCount = ($IssueCombinations | Where-Object { -not $_.IsExpandedFromGroup }).Count
-            UniqueTemplatesAffected = ($IssueCombinations | ForEach-Object { $_.AffectedTemplates } | Select-Object -Unique).Count
-            UniqueCAsAffected = ($IssueCombinations | ForEach-Object { $_.AffectedCAs } | Select-Object -Unique).Count
+            ExpandedFromGroupCount = ($IssueCombos | Where-Object IsExpandedFromGroup).Count
+            DirectPrincipalCount = ($IssueCombos | Where-Object { -not $_.IsExpandedFromGroup }).Count
+            UniqueTemplatesAffected = ($IssueCombos | ForEach-Object { $_.AffectedTemplates } | Select-Object -Unique).Count
+            UniqueCAsAffected = ($IssueCombos | ForEach-Object { $_.AffectedCAs } | Select-Object -Unique).Count
         }
         
         $Summary | Add-Member -NotePropertyName "Statistics" -NotePropertyValue $Stats
@@ -135,16 +135,16 @@ function Get-SummaryReport {
 }
 
 function Get-DetailedReport {
-    param ($IssueCombinations, [switch]$GroupByPrincipal)
+    param ($IssueCombos, [switch]$GroupByPrincipal)
     
     if ($GroupByPrincipal) {
-        $GroupedCombinations = $IssueCombinations | Group-Object PrincipalName | ForEach-Object {
+        $GroupedCombinations = $IssueCombos | Group-Object PrincipalName | ForEach-Object {
             $PrincipalCombinations = $_.Group
             [PSCustomObject]@{
                 PrincipalName = $_.Name
                 PrincipalSID = ($PrincipalCombinations | Select-Object -First 1).PrincipalSID
-                TotalIssueCombinations = $_.Count
-                IssueCombinations = $PrincipalCombinations | Select-Object IssueCombinationName, IssueCombinationDescription
+                TotalIssueCombos = $_.Count
+                IssueCombos = $PrincipalCombinations | Select-Object IssueComboName, IssueComboDescription
                 ESC4Capabilities = ($PrincipalCombinations | Select-Object -First 1).ESC4Capabilities
                 ESC5Capabilities = ($PrincipalCombinations | Select-Object -First 1).ESC5Capabilities
                 AffectedTemplates = ($PrincipalCombinations | ForEach-Object { $_.AffectedTemplates } | Select-Object -Unique)
@@ -152,18 +152,18 @@ function Get-DetailedReport {
                 IsExpandedFromGroup = ($PrincipalCombinations | Select-Object -First 1).IsExpandedFromGroup
                 ExpandedFromGroup = ($PrincipalCombinations | Select-Object -First 1).ExpandedFromGroup
             }
-        } | Sort-Object TotalIssueCombinations -Descending
+        } | Sort-Object TotalIssueCombos -Descending
         
         return $GroupedCombinations
     } else {
-        return $IssueCombinations | Sort-Object IssueCombinationName
+        return $IssueCombos | Sort-Object IssueComboName
     }
 }
 
 function Get-PrincipalFocusReport {
-    param ($IssueCombinations)
+    param ($IssueCombos)
     
-    $PrincipalAnalysis = $IssueCombinations | Group-Object PrincipalName | ForEach-Object {
+    $PrincipalAnalysis = $IssueCombos | Group-Object PrincipalName | ForEach-Object {
         $PrincipalCombinations = $_.Group
         $FirstCombination = $PrincipalCombinations | Select-Object -First 1
         
@@ -182,28 +182,28 @@ function Get-PrincipalFocusReport {
             CapabilityProfile = $CapabilityProfile
             ESC4CapabilityCount = $ESC4Count
             ESC5CapabilityCount = $ESC5Count
-            TotalIssueCombinations = $_.Count
+            TotalIssueCombos = $_.Count
             IsExpandedFromGroup = $FirstCombination.IsExpandedFromGroup
             ExpandedFromGroup = $FirstCombination.ExpandedFromGroup
             UniqueTemplatesAffected = ($PrincipalCombinations | ForEach-Object { $_.AffectedTemplates } | Select-Object -Unique).Count
             UniqueCAsAffected = ($PrincipalCombinations | ForEach-Object { $_.AffectedCAs } | Select-Object -Unique).Count
         }
-    } | Sort-Object TotalIssueCombinations -Descending
+    } | Sort-Object TotalIssueCombos -Descending
     
     return $PrincipalAnalysis
 }
 
 function Get-StepsReport {
-    param ($IssueCombinations)
+    param ($IssueCombos)
     
-    $StepsAnalysis = $IssueCombinations | Group-Object IssueCombinationId | ForEach-Object {
+    $StepsAnalysis = $IssueCombos | Group-Object IssueComboId | ForEach-Object {
         $CombinationGroup = $_.Group
         $FirstCombination = $CombinationGroup | Select-Object -First 1
         
         [PSCustomObject]@{
-            IssueCombinationId = $_.Name
-            IssueCombinationName = $FirstCombination.IssueCombinationName
-            Description = $FirstCombination.IssueCombinationDescription
+            IssueComboId = $_.Name
+            IssueComboName = $FirstCombination.IssueComboName
+            Description = $FirstCombination.IssueComboDescription
             AffectedPrincipalCount = $_.Count
             Steps = $FirstCombination.Steps
             RequiredCapabilities = $FirstCombination.RequiredCapabilities

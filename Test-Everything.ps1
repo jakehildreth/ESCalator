@@ -23,20 +23,20 @@ $AllPrincipals | Add-IssueToPrincipal -Issues $OriginalIssues, $ExpandedIssues
 
 # NEW: Find ESC Issue Combinations
 Write-Host "`n🎯 Analyzing ESC Issue Combinations..." -ForegroundColor Cyan
-$IssueCombinations = Find-IssueCombinations -Issues $OriginalIssues, $ExpandedIssues -Verbose
+$IssueCombos = Find-IssueCombos -Issues $OriginalIssues, $ExpandedIssues -Verbose
 
 # Display summary
-if ($IssueCombinations) {
-    Write-Host "`n✅ Found $($IssueCombinations.Count) ESC issue combination capabilities!" -ForegroundColor Green
+if ($IssueCombos) {
+    Write-Host "`n✅ Found $($IssueCombos.Count) ESC issue combination capabilities!" -ForegroundColor Green
     
     # Show issue combinations summary
     Write-Host "`n� AD CS ISSUE COMBINATIONS FOUND:" -ForegroundColor Yellow
-    $IssueCombinations | Format-Table PrincipalName, IssueCombinationName, ESC4Capabilities, ESC5Capabilities -AutoSize
+    $IssueCombos | Format-Table PrincipalName, IssueComboName, ESC4Capabilities, ESC5Capabilities -AutoSize
     
     # Generate comprehensive report
     Write-Host "`n📊 Generating Issue Combination Report..." -ForegroundColor Cyan
-    $IssueCombinationReport = Get-IssueCombinationReport -IssueCombinations $IssueCombinations -ReportType Summary -IncludeStatistics
-    $IssueCombinationReport | Format-List
+    $IssueComboReport = Get-IssueComboReport -IssueCombos $IssueCombos -ReportType Summary -IncludeStatistics
+    $IssueComboReport | Format-List
     
 } else {
     Write-Host "`n✅ No ESC issue combination capabilities found." -ForegroundColor Green

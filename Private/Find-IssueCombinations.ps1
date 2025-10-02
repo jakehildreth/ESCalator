@@ -13,7 +13,7 @@ function Find-IssueCombinations {
         Supports multiple arrays that will be automatically flattened.
 
         .PARAMETER ConfigPath
-        Path to the ESC1 issue combinations configuration file. Defaults to IssueCombinations directory.
+        Path to the ESC issue combinations configuration file. Defaults to IssueCombinations directory.
 
         .PARAMETER IncludePartialChains
         Include principals with partial issue combination capabilities (may require additional access).
@@ -24,7 +24,7 @@ function Find-IssueCombinations {
 
         .OUTPUTS
         PSCustomObject[]
-        Returns objects describing principals with ESC1 issue combination capabilities.
+        Returns objects describing principals with ESC issue combination capabilities.
 
         Each output object contains:
         - PrincipalName: The principal (user/group) name
@@ -70,7 +70,7 @@ function Find-IssueCombinations {
     )
 
     begin {
-        Write-Verbose "Starting ESC1 issue combination analysis..."
+        Write-Verbose "Starting ESC issue combination analysis..."
         
         # Load shared configuration
         $SharedConfigPath = Join-Path $ConfigPath "SharedConfig.json"
@@ -198,7 +198,7 @@ function Find-IssueCombinations {
     }
 
     end {
-        Write-Verbose "Completed ESC1 issue combination analysis"
+        Write-Verbose "Completed ESC issue combination analysis"
     }
 }
 

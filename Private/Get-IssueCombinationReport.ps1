@@ -1,10 +1,10 @@
 function Get-IssueCombinationReport {
     <#
         .SYNOPSIS
-        Generates comprehensive reports from ESC1 issue combination analysis results.
+        Generates comprehensive reports from ESC issue combination analysis results.
 
         .DESCRIPTION
-        This function takes ESC1 issue combination analysis results and generates various report formats
+        This function takes ESC issue combination analysis results and generates various report formats
         including summary statistics, detailed principal analysis, and capability breakdowns.
 
         .PARAMETER IssueCombinations
@@ -30,7 +30,7 @@ function Get-IssueCombinationReport {
         Get-IssueCombinationReport -IssueCombinations $IssueCombinations -ReportType Detailed -GroupByPrincipal -IncludeStatistics
 
         .EXAMPLE
-        Get-IssueCombinationReport -IssueCombinations $IssueCombinations -ReportType Summary -ExportPath "C:\Reports\ESC1-Analysis.json"
+        Get-IssueCombinationReport -IssueCombinations $IssueCombinations -ReportType Summary -ExportPath "C:\Reports\ESC-Analysis.json"
     #>
     [CmdletBinding()]
     param (
@@ -89,7 +89,7 @@ function Get-SummaryReport {
     param ($IssueCombinations, [switch]$IncludeStatistics)
     
     $Summary = [PSCustomObject]@{
-        ReportType = 'ESC1 Issue Combination Summary'
+        ReportType = 'ESC Issue Combination Summary'
         GeneratedDate = Get-Date
         TotalIssueCombinations = $IssueCombinations.Count
         UniquePrincipals = ($IssueCombinations | Select-Object PrincipalName -Unique).Count
@@ -233,7 +233,7 @@ function Export-Report {
             }
         }
         '.html' {
-            $Html = $Report | ConvertTo-Html -Title "ESC1 Attack Chain Report" -PreContent "<h1>ESC1 Attack Chain Analysis Report</h1><p>Generated: $(Get-Date)</p>"
+            $Html = $Report | ConvertTo-Html -Title "ESC Issue Combo Report" -PreContent "<h1>ESC Issue Combo Analysis Report</h1><p>Generated: $(Get-Date)</p>"
             $Html | Set-Content $Path -Encoding UTF8
             Write-Verbose "Report exported to HTML: $Path"
         }

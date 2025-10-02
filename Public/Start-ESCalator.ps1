@@ -25,26 +25,10 @@ function Start-ESCalator {
     #requires -Version 5
 
     do {
-        # Randomly choose gradient direction
-        $useReverseGradient = Get-Random -Maximum 2
+        # Get random gradient colors
+        $colors = Get-RandomGradientColors
         
-        if ($useReverseGradient) {
-            # Light to dark gradient (coral to dark magenta)
-            $color1 = 203  # coral
-            $color2 = 198  # pink-red  
-            $color3 = 162  # bright magenta-pink
-            $color4 = 126  # medium magenta
-            $color5 = 90   # dark magenta
-        } else {
-            # Dark to light gradient (dark magenta to coral)
-            $color1 = 90   # dark magenta
-            $color2 = 126  # medium magenta
-            $color3 = 162  # bright magenta-pink
-            $color4 = 198  # pink-red
-            $color5 = 203  # coral
-        }
-        
-        Show-ESCalatorHeader -Color1 $color1 -Color2 $color2 -Color3 $color3 -Color4 $color4 -Color5 $color5
+        Show-ESCalatorHeader -Color1 $colors.Color1 -Color2 $colors.Color2 -Color3 $colors.Color3 -Color4 $colors.Color4 -Color5 $colors.Color5
         
         Write-Host "Which attack paths would you like to display?"
         Write-Host "1. Current user/computer context"

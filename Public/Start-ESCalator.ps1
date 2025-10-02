@@ -47,10 +47,6 @@ function Start-ESCalator {
         
         switch ($choice) {
             1 {
-                Write-Host ""
-                Write-Host "You selected: Current user/computer context" -ForegroundColor Yellow
-                Write-Host ""
-                
                 # Check if user is local administrator
                 Write-Host "Checking local administrator privileges..." -ForegroundColor Cyan
                 if (Test-IsLocalAdmin) {

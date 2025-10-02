@@ -40,6 +40,9 @@ function Start-ESCalator {
     try {
         $AdcsObjects = Get-AdcsObjects
         Write-Host "   ✅ Successfully retrieved $($AdcsObjects.Count) AD CS objects" -ForegroundColor Green
+        Write-Host "   • Determining template enrollment status..." -ForegroundColor Gray
+        $AdcsObjects | Get-EnabledTemplate | Set-EnabledTemplateStatus | Out-Null
+        Write-Host "   ✅ Template enrollment status determined" -ForegroundColor Green
     } catch {
         Write-Host "   ❌ Failed to retrieve AD CS objects: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host ""

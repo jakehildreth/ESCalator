@@ -256,6 +256,33 @@ function Get-GradientColors {
         return [Math]::Min(231, [Math]::Max(16, $ansiCode))
     }
 
+    # Find closest HTML color name for RGB values
+    function Find-ClosestColorName {
+        param([int]$R, [int]$G, [int]$B)
+        
+        $closestColor = $null
+        $minDistance = [double]::MaxValue
+        
+        foreach ($colorName in $htmlColors.Keys) {
+            $colorHex = $htmlColors[$colorName]
+            $colorRGB = ConvertFrom-Hex -HexColor $colorHex
+            
+            # Calculate Euclidean distance in RGB space
+            $distance = [Math]::Sqrt(
+                [Math]::Pow($R - $colorRGB.R, 2) + 
+                [Math]::Pow($G - $colorRGB.G, 2) + 
+                [Math]::Pow($B - $colorRGB.B, 2)
+            )
+            
+            if ($distance -lt $minDistance) {
+                $minDistance = $distance
+                $closestColor = $colorName
+            }
+        }
+        
+        return $closestColor
+    }
+
     # Parse start and end colors (convert to hex if needed)
     $startHex = ConvertTo-Hex -Color $StartColor
     $endHex = ConvertTo-Hex -Color $EndColor
@@ -265,6 +292,7 @@ function Get-GradientColors {
 
     # Generate gradient
     $gradientColors = @()
+    $gradientInfo = @()  # Store RGB and color name info for preview
     
     for ($i = 0; $i -lt $Steps; $i++) {
         # Calculate interpolation factor (0.0 to 1.0)
@@ -278,6 +306,14 @@ function Get-GradientColors {
         # Convert to ANSI and add to array
         $ansiColor = ConvertTo-ANSI256 -R $currentR -G $currentG -B $currentB
         $gradientColors += $ansiColor
+        
+        # Store info for preview
+        $closestColorName = Find-ClosestColorName -R $currentR -G $currentG -B $currentB
+        $gradientInfo += @{
+            ANSI = $ansiColor
+            ColorName = $closestColorName
+            RGB = @{ R = $currentR; G = $currentG; B = $currentB }
+        }
     }
 
     # Display preview if requested
@@ -285,10 +321,13 @@ function Get-GradientColors {
         Write-Host ""
         Write-Host "`e[1mGradient Preview`e[0m" -ForegroundColor White
         
+        # Find the longest color name for consistent padding
+        $maxColorNameLength = ($gradientInfo | ForEach-Object { $_.ColorName.Length } | Measure-Object -Maximum).Maximum
+        
         for ($i = 0; $i -lt $gradientColors.Count; $i++) {
-            $color = $gradientColors[$i]
-            $stepNumber = $i + 1
-            $colorName = "Color $stepNumber"
+            $info = $gradientInfo[$i]
+            $color = $info.ANSI
+            $colorName = $info.ColorName.PadRight($maxColorNameLength)
             
             # Create the preview block with inverted text inside and ANSI code beside
             $block = "████████████"  # 12 block characters

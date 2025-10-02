@@ -47,7 +47,7 @@ function Show-MenuOptions {
     
     Write-Host ""
     if ($AllowBack) {
-        Write-Host "b. Back" -ForegroundColor Yellow
+        Write-Host "b. Back to Previous Menu" -ForegroundColor Yellow
     }
     Write-Host "q. Quit" -ForegroundColor Red
     Write-Host ""

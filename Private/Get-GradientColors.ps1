@@ -18,7 +18,7 @@ function Get-GradientColors {
         Number of gradient steps to generate (minimum 2)
 
         .PARAMETER Theme
-        Predefined color theme to use instead of custom colors
+        Predefined color theme to use instead of custom colors. Use "Random" to randomly select a theme.
 
         .PARAMETER Preview
         Display a vertical preview of the gradient colors with ANSI codes and color names
@@ -37,6 +37,10 @@ function Get-GradientColors {
         .EXAMPLE
         $gradient = Get-GradientColors -Theme "Sunset" -Steps 5
         # Creates a sunset-themed gradient
+
+        .EXAMPLE
+        $gradient = Get-GradientColors -Theme "Random" -Steps 5
+        # Creates a gradient using a randomly selected theme
 
         .EXAMPLE
         Get-GradientColors -Theme "Ocean" -Steps 8 -Preview
@@ -120,7 +124,7 @@ function Get-GradientColors {
         [int]$Steps,
         
         [Parameter(Mandatory, ParameterSetName = 'Theme')]
-        [ValidateSet('Sunset', 'Ocean', 'Forest', 'Fire', 'Purple', 'Grayscale', 'Rainbow', 'Neon', 'Cyberpunk', 'Pastel', 'Autumn', 'Winter', 'Spring', 'Summer')]
+        [ValidateSet('Sunset', 'Ocean', 'Forest', 'Fire', 'Purple', 'Grayscale', 'Rainbow', 'Neon', 'Cyberpunk', 'Pastel', 'Autumn', 'Winter', 'Spring', 'Summer', 'Random')]
         [string]$Theme,
         
         [Parameter(ParameterSetName = 'CustomColors')]
@@ -152,6 +156,13 @@ function Get-GradientColors {
 
     # If using a theme, get the colors from the theme
     if ($PSCmdlet.ParameterSetName -eq 'Theme') {
+        # Handle random theme selection
+        if ($Theme -eq 'Random') {
+            $availableThemes = @('Sunset', 'Ocean', 'Forest', 'Fire', 'Purple', 'Grayscale', 'Rainbow', 'Neon', 'Cyberpunk', 'Pastel', 'Autumn', 'Winter', 'Spring', 'Summer')
+            $Theme = $availableThemes | Get-Random
+            Write-Verbose "Random theme selected: $Theme"
+        }
+        
         $themeColors = $colorThemes[$Theme]
         $StartColor = $themeColors.Start
         $EndColor = $themeColors.End

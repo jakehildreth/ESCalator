@@ -25,23 +25,41 @@ function Start-ESCalator {
     #requires -Version 5
 
     do {
+        # Randomly choose gradient direction
+        $useReverseGradient = Get-Random -Maximum 2
+        
+        if ($useReverseGradient) {
+            # Light to dark gradient (coral to dark magenta)
+            $color1 = 203  # coral
+            $color2 = 198  # pink-red  
+            $color3 = 162  # bright magenta-pink
+            $color4 = 126  # medium magenta
+            $color5 = 90   # dark magenta
+        } else {
+            # Dark to light gradient (dark magenta to coral)
+            $color1 = 90   # dark magenta
+            $color2 = 126  # medium magenta
+            $color3 = 162  # bright magenta-pink
+            $color4 = 198  # pink-red
+            $color5 = 203  # coral
+        }
+        
         Write-Host ""
-        Write-Host "╔══════════════════════════════════════════════════════════════════════════════════════════╗" -ForegroundColor White
-        Write-Host "║`e[38;5;90m█        ███      ████      ████      ███  █████████      ███        ███      ███       ██`e[0m║" -ForegroundColor White
-        Write-Host "║`e[38;5;126m█  ████████  ████████  ████  ██  ████  ██  ████████  ████  █████  █████  ████  ██  ████  █`e[0m║" -ForegroundColor White
-        Write-Host "║`e[38;5;162m█      █████      ███  ████████  ████  ██  ████████  ████  █████  █████  ████  ██       ██`e[0m║" -ForegroundColor White
-        Write-Host "║`e[38;5;198m█  ██████████████  ██  ████  ██        ██  ████████        █████  █████  ████  ██  ███  ██`e[0m║" -ForegroundColor White
-        Write-Host "║`e[38;5;203m█        ███      ████      ███  ████  ██        ██  ████  █████  ██████      ███  ████  █`e[0m║" -ForegroundColor White
-        Write-Host "╚══════════════════╦═════════════════════════════════════════════════╦═════════════════════╝" -ForegroundColor White
-        Write-Host "                   ║ AD CS Attack Path Identification and Abuse Tool ║" -ForegroundColor White
-        Write-Host "                   ║             (c) 2025 Jake Hildreth              ║" -ForegroundColor White
-        Write-Host "                   ║          `e[1mFOR EDUCATIONAL PURPOSES ONLY`e[0m          ║" -ForegroundColor White
-        Write-Host "                   ╚═════════════════════════════════════════════════╝" -ForegroundColor White
+        Write-Host "`e[38;5;${color1}m█        ███      ████      ████      ███  █████████      ███        ███      ███       ██`e[0m" -ForegroundColor White
+        Write-Host "`e[38;5;${color2}m█  ████████  ████████  ████  ██  ████  ██  ████████  ████  █████  █████  ████  ██  ████  █`e[0m" -ForegroundColor White
+        Write-Host "`e[38;5;${color3}m█      █████      ███  ████████  ████  ██  ████████  ████  █████  █████  ████  ██       ██`e[0m" -ForegroundColor White
+        Write-Host "`e[38;5;${color4}m█  ██████████████  ██  ████  ██        ██  ████████        █████  █████  ████  ██  ███  ██`e[0m" -ForegroundColor White
+        Write-Host "`e[38;5;${color5}m█        ███      ████      ███  ████  ██        ██  ████  █████  ██████      ███  ████  █`e[0m" -ForegroundColor White
+        Write-Host "`e[38;5;${color5}m                   ╔═════════════════════════════════════════════════╗`e[0m"
+        Write-Host "`e[38;5;${color4}m                   ║`e[0m AD CS Attack Path Identification and Abuse Tool `e[38;5;${color4}m║`e[0m"
+        Write-Host "`e[38;5;${color3}m                   ║`e[0m             (c) 2025 Jake Hildreth              `e[38;5;${color3}m║`e[0m"
+        Write-Host "`e[38;5;${color2}m                   ║`e[0m          `e[1mFOR EDUCATIONAL PURPOSES ONLY`e[0m          `e[38;5;${color2}m║`e[0m"
+        Write-Host "`e[38;5;${color1}m                   ╚═════════════════════════════════════════════════╝`e[0m"
         Write-Host ""
         Write-Host "Which attack paths would you like to display?"
-        Write-Host "1. Forest-wide"
-        Write-Host "2. Current context"
-        Write-Host "3. Specific user/computer"
+        Write-Host "1. Current user/computer context"
+        Write-Host "2. Specific user/computer"
+        Write-Host "3. Forest-wide"
         Write-Host ""
         Write-Host "q. Quit"
         Write-Host ""
@@ -51,19 +69,19 @@ function Start-ESCalator {
         switch ($choice.ToUpper()) {
             '1' {
                 Write-Host ""
-                Write-Host "You selected: 1 - Forest-wide" -ForegroundColor Yellow
+                Write-Host "You selected: 1 - Current user/computer context" -ForegroundColor Yellow
                 Write-Host ""
                 Read-Host "Press Enter to continue"
             }
             '2' {
                 Write-Host ""
-                Write-Host "You selected: 2 - Current context" -ForegroundColor Yellow
+                Write-Host "You selected: 2 - Specific user/computer" -ForegroundColor Yellow
                 Write-Host ""
                 Read-Host "Press Enter to continue"
             }
             '3' {
                 Write-Host ""
-                Write-Host "You selected: 3 - Specific user/computer" -ForegroundColor Yellow
+                Write-Host "You selected: 3 - Forest-wide" -ForegroundColor Yellow
                 Write-Host ""
                 Read-Host "Press Enter to continue"
             }
@@ -74,7 +92,7 @@ function Start-ESCalator {
             }
             default {
                 Write-Host ""
-                Write-Host "Invalid selection. Please choose 1, 2, or Q." -ForegroundColor Red
+                Write-Host "Invalid selection. Please choose 1, 2, 3, or Q." -ForegroundColor Red
                 Start-Sleep -Seconds 1
             }
         }

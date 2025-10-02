@@ -17,6 +17,10 @@ function Find-ESC4Issue {
         .PARAMETER SafeOwners
         Regex pattern of SIDs for principals that are safe to own certificate templates.
 
+        .PARAMETER SafeUsers
+        Regex pattern of SIDs for principals that are considered safe and should be excluded from vulnerability findings.
+        Defaults to common administrative and system account SIDs.
+
         .PARAMETER SafeObjectTypes
         Array of object type GUIDs that are safe when granted specific permissions (Enroll, AutoEnroll).
 
@@ -64,6 +68,12 @@ function Find-ESC4Issue {
         $Issues = Find-ESC4Issue -AdcsObjects $AdcsObjects | Where-Object { $_.Name -eq "User" }
 
         .EXAMPLE
+        # Use expanded SafeUsers pattern to reduce false positives
+        $ExpandedSafeUsers = Expand-SafeUsers -AdcsObjects $AdcsObjects
+        $ESC4Issues = Find-ESC4Issue -AdcsObjects $AdcsObjects -SafeUsers $ExpandedSafeUsers
+        $ESC4Issues | Format-Table Name, IdentityReference, ActiveDirectoryRights
+
+        .EXAMPLE
         # Filter for specific ESC4 subtypes
         $ESC4Issues = Find-ESC4Issue -AdcsObjects $AdcsObjects
         $ESC4Issues | Format-Table Name, Subtype, IdentityReference, ActiveDirectoryRights
@@ -105,6 +115,9 @@ function Find-ESC4Issue {
         [string]$SafeOwners = '-519$',
         
         [Parameter()]
+        [string]$SafeUsers = '-512$|-519$|-544$|-18$|-517$|-500$|-516$|-521$|-498$|-9$|-526$|-527$|S-1-5-10',
+        
+        [Parameter()]
         [string[]]$SafeObjectTypes = @('0e10c968-78fb-11d2-90d4-00c04f79dc55', 'a05b8cc2-17bc-4802-a710-e7c15ab866a2'),
         
         [Parameter()]
@@ -132,6 +145,7 @@ function Find-ESC4Issue {
         Write-Verbose "Starting ESC4 template vulnerability scan"
         Write-Verbose "Dangerous Rights: $($DangerousRights -join ', ')"
         Write-Verbose "Safe Owners Pattern: $SafeOwners"
+        Write-Verbose "Safe Users Pattern: $SafeUsers"
     }
 
     process {
@@ -174,8 +188,8 @@ function Find-ESC4Issue {
                             $ownerSID = $ownerPrincipal.Translate([System.Security.Principal.SecurityIdentifier]).Value
                         }
                         
-                        # Check if owner is unsafe
-                        if ($ownerSID -notmatch $SafeOwners) {
+                        # Check if owner is unsafe (not in SafeOwners and not in SafeUsers)
+                        if ($ownerSID -notmatch $SafeOwners -and $ownerSID -notmatch $SafeUsers) {
                             Write-Verbose "Found dangerous owner: $($security.Owner)"
                             
                             [ESCalatorIssue]::CreateOriginalIssue(
@@ -191,6 +205,8 @@ function Find-ESC4Issue {
                                 $null,             # ObjectType
                                 $Template          # DirectoryEntry
                             )
+                        } else {
+                            Write-Verbose "Owner $($security.Owner) is considered safe, skipping"
                         }
                     } catch {
                         Write-Warning "Failed to process owner '$($security.Owner)' for template $templateName : $_"
@@ -220,7 +236,7 @@ function Find-ESC4Issue {
                                 $isSafeObjectType = $ace.ObjectType.Guid -in $SafeObjectTypes
                             }
 
-                            if (($ace.AccessControlType -eq 'Allow') -and -not $isSafeObjectType -and ($aceSID -notmatch $SafeOwners)) {
+                            if (($ace.AccessControlType -eq 'Allow') -and -not $isSafeObjectType -and ($aceSID -notmatch $SafeOwners) -and ($aceSID -notmatch $SafeUsers)) {
                                 
                                 $subtype = $null
                                 $objectTypeGuid = if ($ace.ObjectType) { $ace.ObjectType.Guid } else { $null }

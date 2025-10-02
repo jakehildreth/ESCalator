@@ -21,13 +21,13 @@ $AllPrincipals = Get-IndividualPrincipals -Issues $OriginalIssues, $ExpandedIssu
 # Attach Issue objects to Principal Objects
 $AllPrincipals | Add-IssueToPrincipal -Issues $OriginalIssues, $ExpandedIssues
 
-# NEW: Find ESC1 Issue Combinations
-Write-Host "`n🎯 Analyzing ESC1 Issue Combinations..." -ForegroundColor Cyan
+# NEW: Find ESC Issue Combinations
+Write-Host "`n🎯 Analyzing ESC Issue Combinations..." -ForegroundColor Cyan
 $IssueCombinations = Find-IssueCombinations -Issues $OriginalIssues, $ExpandedIssues -Verbose
 
 # Display summary
 if ($IssueCombinations) {
-    Write-Host "`n✅ Found $($IssueCombinations.Count) ESC1 issue combination capabilities!" -ForegroundColor Green
+    Write-Host "`n✅ Found $($IssueCombinations.Count) ESC issue combination capabilities!" -ForegroundColor Green
     
     # Show issue combinations summary
     Write-Host "`n� AD CS ISSUE COMBINATIONS FOUND:" -ForegroundColor Yellow
@@ -39,5 +39,5 @@ if ($IssueCombinations) {
     $IssueCombinationReport | Format-List
     
 } else {
-    Write-Host "`n✅ No ESC1 issue combination capabilities found." -ForegroundColor Green
+    Write-Host "`n✅ No ESC issue combination capabilities found." -ForegroundColor Green
 }

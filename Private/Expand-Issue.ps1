@@ -151,7 +151,11 @@ function Expand-Issue {
                             # Get group members
                             $GroupPrincipal = [System.DirectoryServices.AccountManagement.GroupPrincipal]::FindByIdentity($PrincipalContext, 'Sid', $sid)
                             if ($GroupPrincipal) {
-                                $members = $GroupPrincipal.GetMembers($Recursive)  # Use parameter for recursive expansion
+                                $members = if ($Recursive) {
+                                    $GroupPrincipal.GetMembers($true)  # Recursive expansion
+                                } else {
+                                    $GroupPrincipal.GetMembers()  # Direct members only
+                                }
                                 
                                 if ($members) {
                                     $memberCount = 0
@@ -204,7 +208,7 @@ function Expand-Issue {
                                 } else {
                                     Write-Verbose "Group $($Principal.Name) has no members"
                                     # Output original issue with note that group is empty
-                                    $emptyGroupIssue = $IssueObject.CreateCopy()
+                                    $emptyGroupIssue = $IssueObject.CreateCopy(@{})
                                     $emptyGroupIssue | Add-Member -NotePropertyName "GroupExpansionNote" -NotePropertyValue "Group has no members" -Force
                                     Write-Output $emptyGroupIssue
                                 }
@@ -221,7 +225,7 @@ function Expand-Issue {
                     catch {
                         Write-Warning "Failed to expand group membership for SID $sid in domain $domain : $_"
                         # Output original issue with error note
-                        $errorIssue = $IssueObject.CreateCopy()
+                        $errorIssue = $IssueObject.CreateCopy(@{})
                         $errorIssue | Add-Member -NotePropertyName "GroupExpansionError" -NotePropertyValue $_.Exception.Message -Force
                         Write-Output $errorIssue
                     }

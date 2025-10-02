@@ -219,7 +219,7 @@ class ESCalatorIssue {
         }
         
         # Validate technique is known
-        $validTechniques = @('ESC4', 'ESC5', 'ESC1', 'ESC2', 'ESC3', 'ESC6', 'ESC7', 'ESC8', 'ESC9', 'ESC10', 'ESC11', 'ESC13', 'ESC15')
+        $validTechniques = @('ESC4', 'ESC5', 'ESC1', 'ESC2', 'ESC3', 'ESC6', 'ESC7', 'ESC8', 'ESC9', 'ESC10', 'ESC11', 'ESC13', 'ESC15', 'ESC16')
         if ($this.Technique -notin $validTechniques) {
             Write-Warning "ESCalatorIssue validation failed: Unknown technique '$($this.Technique)'"
             return $false

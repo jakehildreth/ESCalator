@@ -44,16 +44,16 @@ function Find-ESC4 {
         - DirectoryEntry: The actual DirectoryEntry object for the template
 
         ESC4 Subtypes:
-        - Owner-Template: Principal owns the certificate template
         - GenericAll-Template: GenericAll rights on certificate template
         - GenericWrite-Template: GenericWrite rights on certificate template
+        - Owner-Template: Principal owns the certificate template
+        - WriteDacl-Template: WriteDacl rights on certificate template
+        - WriteOwner-Template: WriteOwner rights on certificate template
         - WriteProperty-Template-AllObjects: WriteProperty for All Objects on template
-        - WriteProperty-Template-PKIExtendedKeyUsage: WriteProperty on pkiExtendedKeyUsage attribute
         - WriteProperty-Template-CertNameFlag: WriteProperty on msPKI-Certificate-Name-Flag attribute
         - WriteProperty-Template-EnrollmentFlag: WriteProperty on msPKI-Enrollment-Flag attribute
+        - WriteProperty-Template-PKIExtendedKeyUsage: WriteProperty on pkiExtendedKeyUsage attribute
         - WriteProperty-Template-RASignature: WriteProperty on msPKI-RA-Signature attribute
-        - WriteOwner-Template: WriteOwner rights on certificate template
-        - WriteDacl-Template: WriteDacl rights on certificate template
 
         .EXAMPLE
         $AdcsObjects = Get-AdcsObjects
@@ -179,17 +179,17 @@ function Find-ESC4 {
                             Write-Verbose "Found dangerous owner: $($security.Owner)"
                             
                             [ESCalatorIssue]::CreateOriginalIssue(
-                                $forestName,                                    # Forest
-                                $templateName,                                  # Name
-                                $templateDN,                                    # DistinguishedName
-                                $security.Owner,                                # IdentityReference
-                                $ownerSID,                                      # IdentityReferenceSID
-                                'Owner',                                        # ActiveDirectoryRights
-                                'ESC4',                                         # Technique
-                                'Owner-Template',                               # Subtype
+                                $forestName,       # Forest
+                                $templateName,     # Name
+                                $templateDN,       # DistinguishedName
+                                $security.Owner,   # IdentityReference
+                                $ownerSID,         # IdentityReferenceSID
+                                'Owner',           # ActiveDirectoryRights
+                                'ESC4',            # Technique
+                                'Owner-Template',  # Subtype
                                 "$($security.Owner) has Owner rights on this template and can modify it into a template that can create ESC1, ESC2, and ESC3 templates.", # Issue
-                                $null,                                          # ObjectType
-                                $Template                                       # DirectoryEntry
+                                $null,             # ObjectType
+                                $Template          # DirectoryEntry
                             )
                         }
                     } catch {

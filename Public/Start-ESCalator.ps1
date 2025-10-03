@@ -42,89 +42,89 @@ function Start-ESCalator {
     Write-Verbose "SafeUsers pattern defined: $SafeUsers"
     
     # Initialize variables for the comprehensive analysis (run once)
-    Write-Host "🚀 Initializing ESCalator Analysis Engine..." -ForegroundColor Cyan
+    Write-Host "[i] Initializing ESCalator Analysis Engine..." -ForegroundColor Cyan
     Write-Host ""
     
     # Get AD CS objects
-    Write-Host "📋 Gathering Active Directory Certificate Services objects..." -ForegroundColor Yellow
+    Write-Host "[i] Gathering Active Directory Certificate Services objects..." -ForegroundColor Yellow
     try {
         $AdcsObjects = Get-AdcsObjects
-        Write-Host "   ✅ Successfully retrieved $($AdcsObjects.Count) AD CS objects" -ForegroundColor Green
+        Write-Host "  [+] Successfully retrieved $($AdcsObjects.Count) AD CS objects" -ForegroundColor Green
         Write-Host "   • Determining template enrollment status..." -ForegroundColor Gray
         $EnabledTemplates = $AdcsObjects | Get-EnabledTemplate
         $AdcsObjects | Set-EnabledTemplateStatus -EnabledTemplates $EnabledTemplates | Out-Null
-        Write-Host "   ✅ Template enrollment status determined" -ForegroundColor Green
+        Write-Host "  [+] Template enrollment status determined" -ForegroundColor Green
     } catch {
-        Write-Host "   ❌ Failed to retrieve AD CS objects: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  [x] Failed to retrieve AD CS objects: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host ""
         Read-Host "Press Enter to exit"
         return
     }
     
     # Get all issues with AD CS objects
-    Write-Host "🔍 Scanning for ESC4 and ESC5 vulnerabilities..." -ForegroundColor Yellow
+    Write-Host "[i] Scanning for ESC4 and ESC5 vulnerabilities..." -ForegroundColor Yellow
     try {
         $OriginalIssues = @()
         
         Write-Host "   • Analyzing ESC4 (Vulnerable Certificate Template Access Control)..." -ForegroundColor Gray
         $ESC4Issues = Find-ESC4Issue -AdcsObjects $AdcsObjects
         $OriginalIssues += $ESC4Issues
-        Write-Host "     ✅ Found $($ESC4Issues.Count) ESC4 issues" -ForegroundColor Green
+        Write-Host "    [+] Found $($ESC4Issues.Count) ESC4 issues" -ForegroundColor Green
         
         Write-Host "   • Analyzing ESC5 (Vulnerable PKI Object Access Control)..." -ForegroundColor Gray
         $ESC5Issues = Find-ESC5Issue -AdcsObjects $AdcsObjects
         $OriginalIssues += $ESC5Issues
-        Write-Host "     ✅ Found $($ESC5Issues.Count) ESC5 issues" -ForegroundColor Green
+        Write-Host "    [+] Found $($ESC5Issues.Count) ESC5 issues" -ForegroundColor Green
         
-        Write-Host "   ✅ Total issues found: $($OriginalIssues.Count)" -ForegroundColor Green
+        Write-Host "  [i] Total issues found: $($OriginalIssues.Count)" -ForegroundColor Green
     } catch {
-        Write-Host "   ❌ Failed to scan for vulnerabilities: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  [x] Failed to scan for vulnerabilities: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host ""
         Read-Host "Press Enter to exit"
         return
     }
     
     # Expand group ESCalatorIssue objects into individual principal ESCalatorIssue objects
-    Write-Host "🔄 Expanding group issues to individual principal issues..." -ForegroundColor Yellow
+    Write-Host "[i] Expanding group issues to individual principal issues..." -ForegroundColor Yellow
     try {
         $ExpandedIssues = $OriginalIssues | Expand-Issue
-        Write-Host "   ✅ Expanded $($OriginalIssues.Count) group issues to $($ExpandedIssues.Count) individual principal issues" -ForegroundColor Green
+        Write-Host "  [+] Expanded $($OriginalIssues.Count) group issues to $($ExpandedIssues.Count) individual principal issues" -ForegroundColor Green
     } catch {
-        Write-Host "   ❌ Failed to expand issues: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  [x] Failed to expand issues: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host ""
         Read-Host "Press Enter to exit"
         return
     }
     
     # Attach Issue objects to AD CS objects
-    Write-Host "🔗 Attaching issues to collected AD CS objects..." -ForegroundColor Yellow
+    Write-Host "[i] Attaching issues to collected AD CS objects..." -ForegroundColor Yellow
     try {
         $AdcsObjects | Add-IssueToObject -Issues $OriginalIssues, $ExpandedIssues | Out-Null
-        Write-Host "   ✅ Successfully attached issues to AD CS objects" -ForegroundColor Green
+        Write-Host "  [+] Successfully attached issues to AD CS objects" -ForegroundColor Green
     } catch {
-        Write-Host "   ❌ Failed to attach issues to objects: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  [x] Failed to attach issues to objects: $($_.Exception.Message)" -ForegroundColor Red
     }
     
     # Get all individual principals identified in Issues
-    Write-Host "👥 Identifying individual principals..." -ForegroundColor Yellow
+    Write-Host "[i] Identifying individual principals..." -ForegroundColor Yellow
     try {
         $AllPrincipals = Get-IndividualPrincipals -Issues $OriginalIssues, $ExpandedIssues
-        Write-Host "   ✅ Identified $($AllPrincipals.Count) individual principals" -ForegroundColor Green
+        Write-Host "  [+] Identified $($AllPrincipals.Count) individual principals" -ForegroundColor Green
     } catch {
-        Write-Host "   ❌ Failed to identify principals: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  [x] Failed to identify principals: $($_.Exception.Message)" -ForegroundColor Red
     }
     
     # Attach Issue objects to Principal Objects
-    Write-Host "🔗 Attaching issues to principal objects..." -ForegroundColor Yellow
+    Write-Host "[i] Attaching issues to principal objects..." -ForegroundColor Yellow
     try {
         $AllPrincipals | Add-IssueToPrincipal -Issues $OriginalIssues, $ExpandedIssues | Out-Null
-        Write-Host "   ✅ Successfully attached issues to principals" -ForegroundColor Green
+        Write-Host "  [+] Successfully attached issues to principals" -ForegroundColor Green
     } catch {
-        Write-Host "   ❌ Failed to attach issues to principals: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  [x] Failed to attach issues to principals: $($_.Exception.Message)" -ForegroundColor Red
     }
     
     Write-Host ""
-    Write-Host "🏁 Analysis complete! Ready for interactive exploration..." -ForegroundColor Green
+    Write-Host "[+] Analysis complete! Ready for interactive exploration..." -ForegroundColor Green
     Write-Host ""
 
     # Flag to track first menu display
@@ -171,7 +171,7 @@ function Start-ESCalator {
             }
             'q' {
                 Write-Host ""
-                Write-Host "Goodbye! 👋" -ForegroundColor Green
+                Write-Host "Goodbye!" -ForegroundColor Green
                 return  # Exit the function completely
             }
         }

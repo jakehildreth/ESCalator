@@ -70,7 +70,7 @@ function Get-MenuChoice {
                     $validInput = $true
                 } else {
                     $validInput = $false
-                    Write-Host "`e[38;5;196m❌ Invalid choice. Please enter a number between 1 and $MaxOption" -NoNewline
+                    Write-Host "`e[38;5;196m[x] Invalid choice. Please enter a number between 1 and $MaxOption" -NoNewline
                     if ($AllowBack) {
                         Write-Host ", 'b' for back, or 'q' to quit.`e[0m"
                     } else {
@@ -85,7 +85,7 @@ function Get-MenuChoice {
                     $validOptions += ", 'b' for back"
                 }
                 $validOptions += ", or 'q' to quit"
-                Write-Host "`e[38;5;196m❌ Invalid input. Please enter $validOptions.`e[0m"
+                Write-Host "`e[38;5;196m[x] Invalid input. Please enter $validOptions.`e[0m"
                 Write-Host ""
             }
         }

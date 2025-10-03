@@ -194,6 +194,7 @@ function Expand-Issue {
                                             $IssueObject.Technique,                            # Technique
                                             $IssueObject.Subtype,                              # Subtype
                                             ($IssueObject.Issue -replace [regex]::Escape($IssueObject.IdentityReference), $memberIdentity), # Issue (updated with NetBIOS format)
+                                            $IssueObject.Severity,                             # Severity
                                             $IssueObject.ObjectType,                           # ObjectType
                                             $IssueObject.DirectoryEntry,                       # DirectoryEntry
                                             $IssueObject.IdentityReference,                    # ExpandedFromGroup

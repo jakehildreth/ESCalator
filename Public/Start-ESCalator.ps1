@@ -5,21 +5,29 @@ function Start-ESCalator {
 
         .DESCRIPTION
         Displays a menu with options to analyze Active Directory Certificate Services issue combinations.
+        
+        .PARAMETER ReportOnly
+        When specified, runs the analysis and reports results but exits without entering the interactive menu.
 
         .INPUTS
         None
 
         .OUTPUTS
-        None - Interactive menu
+        None - Interactive menu (or analysis results only if ReportOnly is specified)
 
         .EXAMPLE
         Start-ESCalator
+        
+        .EXAMPLE
+        Start-ESCalator -ReportOnly
 
         .LINK
     #>
     [CmdletBinding()]
     [Alias('ESCalator')]
     param (
+        [Parameter()]
+        [switch]$ReportOnly
     )
 
     #requires -Version 5
@@ -126,6 +134,12 @@ function Start-ESCalator {
     Write-Host ""
     Write-Host "[+] Analysis complete! Ready for interactive exploration..." -ForegroundColor Green
     Write-Host ""
+
+    # If ReportOnly is specified, exit after analysis
+    if ($ReportOnly) {
+        Write-Host "[i] ReportOnly mode - Analysis complete. Exiting..." -ForegroundColor Cyan
+        return
+    }
 
     # Flag to track first menu display
     $firstDisplay = $true

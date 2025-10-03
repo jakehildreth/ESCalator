@@ -23,6 +23,10 @@ function ConvertTo-ESC1 {
         Optional path where the revert script will be generated. If not specified, creates a script
         in the current directory named "Revert-ESC1-{TemplateName}-{Timestamp}.ps1".
 
+        .PARAMETER PassThru
+        Returns the modified DirectoryEntry object representing the certificate template instead of 
+        the default result object. Useful for chaining operations in a pipeline.
+
         .PARAMETER WhatIf
         Shows what changes would be made without actually performing them.
 
@@ -31,8 +35,9 @@ function ConvertTo-ESC1 {
         ESC4 ESCalatorIssue objects with certificate template DirectoryEntry objects, or DirectoryEntry objects representing certificate templates.
 
         .OUTPUTS
-        PSCustomObject
-        Returns a result object indicating success/failure and what changes were made.
+        PSCustomObject, System.DirectoryServices.DirectoryEntry
+        By default, returns a result object indicating success/failure and what changes were made.
+        When -PassThru is specified, returns the modified DirectoryEntry object representing the certificate template.
 
         .EXAMPLE
         $ESC4Issues = Find-ESC4Issue -AdcsObjects $AdcsObjects
@@ -51,6 +56,12 @@ function ConvertTo-ESC1 {
         $ESC4Issues = Find-ESC4Issue -AdcsObjects $AdcsObjects
         $ESC4Issues | Where-Object { $_.Subtype -like '*Template*' } | ConvertTo-ESC1 -RevertScriptPath "C:\Temp\Revert-ESC1.ps1"
 
+        .EXAMPLE
+        # Use PassThru to get the modified template object for further processing
+        $ESC4Issue = Find-ESC4Issue -AdcsObjects $AdcsObjects | Select-Object -First 1
+        $ModifiedTemplate = $ESC4Issue | ConvertTo-ESC1 -PassThru
+        # Now you can use $ModifiedTemplate for additional operations
+
         .LINK
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
 
@@ -67,7 +78,10 @@ function ConvertTo-ESC1 {
         $InputObject,
         
         [Parameter()]
-        [string]$RevertScriptPath
+        [string]$RevertScriptPath,
+        
+        [Parameter()]
+        [switch]$PassThru
     )
 
     #requires -Version 5
@@ -301,19 +315,27 @@ $($revertCommands[-1..-($revertCommands.Count)] | ForEach-Object { "    $_" } | 
             }
             
             # Return result
-            return [PSCustomObject]@{
-                Success = $true
-                Template = $templateName
-                DistinguishedName = $template.Properties['distinguishedName'].Value
-                Changes = $changes
-                RevertScriptPath = if ($revertCommands.Count -gt 0) { $RevertScriptPath } else { $null }
-                Error = $null
+            if ($PassThru) {
+                # Refresh the DirectoryEntry to get updated properties
+                $template.RefreshCache()
+                return $template
+            } else {
+                return [PSCustomObject]@{
+                    Success = $true
+                    Template = $templateName
+                    DistinguishedName = $template.Properties['distinguishedName'].Value
+                    Changes = $changes
+                    RevertScriptPath = if ($revertCommands.Count -gt 0) { $RevertScriptPath } else { $null }
+                    Error = $null
+                }
             }
             
         } catch {
             $errorMsg = "Failed to modify template $($template.Name): $($_.Exception.Message)"
             Write-Warning $errorMsg
             
+            # Note: For error cases, we always return the error object regardless of PassThru
+            # since we cannot return a valid DirectoryEntry when the operation fails
             return [PSCustomObject]@{
                 Success = $false
                 Template = $templateName

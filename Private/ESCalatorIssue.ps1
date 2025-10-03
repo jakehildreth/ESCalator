@@ -23,6 +23,7 @@ class ESCalatorIssue {
     [string]$Technique
     [string]$Subtype
     [string]$Issue
+    [string]$Severity
 
     # Optional properties for detailed analysis
     [string]$ObjectType
@@ -44,6 +45,7 @@ class ESCalatorIssue {
         [string]$Technique,
         [string]$Subtype,
         [string]$Issue,
+        [string]$Severity,
         [string]$ObjectType,
         [System.DirectoryServices.DirectoryEntry]$DirectoryEntry
     ) {
@@ -56,6 +58,7 @@ class ESCalatorIssue {
         $this.Technique = $Technique
         $this.Subtype = $Subtype
         $this.Issue = $Issue
+        $this.Severity = $Severity
         $this.ObjectType = $ObjectType
         $this.DirectoryEntry = $DirectoryEntry
         
@@ -76,6 +79,7 @@ class ESCalatorIssue {
         [string]$Technique,
         [string]$Subtype,
         [string]$Issue,
+        [string]$Severity,
         [string]$ObjectType,
         [System.DirectoryServices.DirectoryEntry]$DirectoryEntry,
         [string]$ExpandedFromGroup,
@@ -91,6 +95,7 @@ class ESCalatorIssue {
         $this.Technique = $Technique
         $this.Subtype = $Subtype
         $this.Issue = $Issue
+        $this.Severity = $Severity
         $this.ObjectType = $ObjectType
         $this.DirectoryEntry = $DirectoryEntry
         $this.ExpandedFromGroup = $ExpandedFromGroup
@@ -109,12 +114,13 @@ class ESCalatorIssue {
         [string]$Technique,
         [string]$Subtype,
         [string]$Issue,
+        [string]$Severity,
         [string]$ObjectType,
         [System.DirectoryServices.DirectoryEntry]$DirectoryEntry
     ) {
         return [ESCalatorIssue]::new(
             $Forest, $Name, $DistinguishedName, $IdentityReference, $IdentityReferenceSID,
-            $ActiveDirectoryRights, $Technique, $Subtype, $Issue, $ObjectType, $DirectoryEntry
+            $ActiveDirectoryRights, $Technique, $Subtype, $Issue, $Severity, $ObjectType, $DirectoryEntry
         )
     }
 
@@ -129,6 +135,7 @@ class ESCalatorIssue {
         [string]$Technique,
         [string]$Subtype,
         [string]$Issue,
+        [string]$Severity,
         [string]$ObjectType,
         [System.DirectoryServices.DirectoryEntry]$DirectoryEntry,
         [string]$ExpandedFromGroup,
@@ -137,7 +144,7 @@ class ESCalatorIssue {
     ) {
         return [ESCalatorIssue]::new(
             $Forest, $Name, $DistinguishedName, $IdentityReference, $IdentityReferenceSID,
-            $ActiveDirectoryRights, $Technique, $Subtype, $Issue, $ObjectType, $DirectoryEntry,
+            $ActiveDirectoryRights, $Technique, $Subtype, $Issue, $Severity, $ObjectType, $DirectoryEntry,
             $ExpandedFromGroup, $ExpandedFromGroupSID, $MemberType
         )
     }
@@ -155,6 +162,7 @@ class ESCalatorIssue {
             Object = $this.Name
             Principal = $this.IdentityReference
             Rights = $this.ActiveDirectoryRights
+            Severity = $this.Severity
             IsExpanded = $this.IsExpanded()
             ExpandedFrom = $this.ExpandedFromGroup
         }
@@ -172,6 +180,7 @@ class ESCalatorIssue {
             Technique = $this.Technique
             Subtype = $this.Subtype
             Issue = $this.Issue
+            Severity = $this.Severity
             ObjectType = $this.ObjectType
             DirectoryEntry = $this.DirectoryEntry
             ExpandedFromGroup = $this.ExpandedFromGroup
@@ -192,6 +201,7 @@ class ESCalatorIssue {
             Technique = $this.Technique
             Subtype = $this.Subtype
             Issue = $this.Issue
+            Severity = $this.Severity
             ObjectType = $this.ObjectType
             DirectoryEntry = $this.DirectoryEntry
             ExpandedFromGroup = $this.ExpandedFromGroup
@@ -209,7 +219,7 @@ class ESCalatorIssue {
     # Method to validate the issue object
     [bool] IsValid() {
         $requiredFields = @('Forest', 'Name', 'DistinguishedName', 'IdentityReference', 
-                           'IdentityReferenceSID', 'ActiveDirectoryRights', 'Technique', 'Subtype', 'Issue')
+                           'IdentityReferenceSID', 'ActiveDirectoryRights', 'Technique', 'Subtype', 'Issue', 'Severity')
         
         foreach ($field in $requiredFields) {
             if ([string]::IsNullOrEmpty($this.$field)) {
@@ -222,6 +232,13 @@ class ESCalatorIssue {
         $validTechniques = @('ESC4', 'ESC5', 'ESC1', 'ESC2', 'ESC3', 'ESC6', 'ESC7', 'ESC8', 'ESC9', 'ESC10', 'ESC11', 'ESC13', 'ESC15', 'ESC16')
         if ($this.Technique -notin $validTechniques) {
             Write-Warning "ESCalatorIssue validation failed: Unknown technique '$($this.Technique)'"
+            return $false
+        }
+        
+        # Validate severity is known
+        $validSeverities = @('Critical', 'High', 'Medium', 'Low')
+        if ($this.Severity -notin $validSeverities) {
+            Write-Warning "ESCalatorIssue validation failed: Unknown severity '$($this.Severity)'"
             return $false
         }
         
@@ -242,7 +259,7 @@ class ESCalatorIssue {
         return [ESCalatorIssue]::new(
             $props.Forest, $props.Name, $props.DistinguishedName, $props.IdentityReference,
             $props.IdentityReferenceSID, $props.ActiveDirectoryRights, $props.Technique,
-            $props.Subtype, $props.Issue, $props.ObjectType, $props.DirectoryEntry,
+            $props.Subtype, $props.Issue, $props.Severity, $props.ObjectType, $props.DirectoryEntry,
             $props.ExpandedFromGroup, $props.ExpandedFromGroupSID, $props.MemberType
         )
     }

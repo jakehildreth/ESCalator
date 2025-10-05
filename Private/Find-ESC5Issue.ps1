@@ -135,7 +135,7 @@ function Find-ESC5Issue {
         [string]$PKICertificateTemplateGUID = 'e5209ca2-3bba-11d2-90cc-00c04fd91ab1',
         
         [Parameter()]
-        [string]$CertificateTemplatesAttributeGUID = 'd15b0dec-d0a0-4e47-a0d7-1cf18d63f0d1'
+        [string]$CertificateTemplatesAttributeGUID = '2a39c5b1-8960-11d1-aebc-0000f80367c1'
     )
 
     #requires -Version 7.4 -Modules Microsoft.PowerShell.Security

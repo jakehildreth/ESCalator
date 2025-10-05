@@ -48,16 +48,16 @@ function Find-ESC4Issue {
         - DirectoryEntry: The actual DirectoryEntry object for the template
 
         ESC4 Subtypes:
-        - GenericAll-Template: GenericAll rights on certificate template
-        - GenericWrite-Template: GenericWrite rights on certificate template
-        - Owner-Template: Principal owns the certificate template
-        - WriteDacl-Template: WriteDacl rights on certificate template
-        - WriteOwner-Template: WriteOwner rights on certificate template
-        - WriteProperty-Template-AllObjects: WriteProperty for All Objects on template
-        - WriteProperty-Template-CertNameFlag: WriteProperty on msPKI-Certificate-Name-Flag attribute
-        - WriteProperty-Template-EnrollmentFlag: WriteProperty on msPKI-Enrollment-Flag attribute
-        - WriteProperty-Template-PKIExtendedKeyUsage: WriteProperty on pkiExtendedKeyUsage attribute
-        - WriteProperty-Template-RASignature: WriteProperty on msPKI-RA-Signature attribute
+        - Template-GenericAll: GenericAll rights on certificate template
+        - Template-GenericWrite: GenericWrite rights on certificate template
+        - Template-Owner: Principal owns the certificate template
+        - Template-WriteDacl: WriteDacl rights on certificate template
+        - Template-WriteOwner: WriteOwner rights on certificate template
+        - Template-WriteProperty-AllObjects: WriteProperty for All Objects on template
+        - Template-WriteProperty-CertNameFlag: WriteProperty on msPKI-Certificate-Name-Flag attribute
+        - Template-WriteProperty-EnrollmentFlag: WriteProperty on msPKI-Enrollment-Flag attribute
+        - Template-WriteProperty-PKIExtendedKeyUsage: WriteProperty on pkiExtendedKeyUsage attribute
+        - Template-WriteProperty-RASignature: WriteProperty on msPKI-RA-Signature attribute
 
         .EXAMPLE
         $AdcsObjects = Get-AdcsObjects
@@ -79,7 +79,7 @@ function Find-ESC4Issue {
         $ESC4Issues | Format-Table Name, Subtype, IdentityReference, ActiveDirectoryRights
 
         # Find template ownership issues
-        $OwnershipIssues = $ESC4Issues | Where-Object { $_.Subtype -eq 'Owner-Template' }
+        $OwnershipIssues = $ESC4Issues | Where-Object { $_.Subtype -eq 'Template-Owner' }
 
         # Find critical attribute modification vulnerabilities
         $CriticalAttrIssues = $ESC4Issues | Where-Object { 
@@ -200,7 +200,7 @@ function Find-ESC4Issue {
                                 $ownerSID,         # IdentityReferenceSID
                                 'Owner',           # ActiveDirectoryRights
                                 'ESC4',            # Technique
-                                'Owner-Template',  # Subtype
+                                'Template-Owner',  # Subtype
                                 "$($security.Owner) has Owner rights on this template and can modify it into a template that can create ESC1, ESC2, and ESC3 templates.", # Issue
                                 'Critical',            # Severity
                                 $null,             # ObjectType
@@ -246,49 +246,49 @@ function Find-ESC4Issue {
 
                                 # Determine ESC4 subtype based on permissions and object type
                                 if ($ace.ActiveDirectoryRights -match 'GenericAll') {
-                                    $subtype = 'GenericAll-Template'
+                                    $subtype = 'Template-GenericAll'
                                     $issue = "$($ace.IdentityReference) has GenericAll rights on this certificate template, allowing complete modification of template settings to create ESC1, ESC2, and ESC3 vulnerabilities."
                                     $includeIssue = $true
                                 }
                                 elseif ($ace.ActiveDirectoryRights -match 'GenericWrite') {
-                                    $subtype = 'GenericWrite-Template'
+                                    $subtype = 'Template-GenericWrite'
                                     $issue = "$($ace.IdentityReference) has GenericWrite rights on this certificate template, allowing modification of template settings to create ESC1, ESC2, and ESC3 vulnerabilities."
                                     $includeIssue = $true
                                 }
                                 elseif ($ace.ActiveDirectoryRights -match 'WriteProperty') {
                                     if ($objectTypeGuid -eq $AllObjectsGUID -or $null -eq $objectTypeGuid) {
-                                        $subtype = 'WriteProperty-Template-AllObjects'
+                                        $subtype = 'Template-WriteProperty-AllObjects'
                                         $issue = "$($ace.IdentityReference) has WriteProperty rights for All Objects on this certificate template, allowing modification of critical template settings to create ESC1, ESC2, and ESC3 vulnerabilities."
                                         $includeIssue = $true
                                     }
                                     elseif ($objectTypeGuid -eq $PKIExtendedKeyUsageGUID) {
-                                        $subtype = 'WriteProperty-Template-PKIExtendedKeyUsage'
+                                        $subtype = 'Template-WriteProperty-PKIExtendedKeyUsage'
                                         $issue = "$($ace.IdentityReference) can modify the pkiExtendedKeyUsage attribute, potentially allowing addition of Client Authentication EKU to create ESC1 vulnerabilities."
                                         $includeIssue = $true
                                     }
                                     elseif ($objectTypeGuid -eq $MSPKICertificateNameFlagGUID) {
-                                        $subtype = 'WriteProperty-Template-CertNameFlag'
+                                        $subtype = 'Template-WriteProperty-CertNameFlag'
                                         $issue = "$($ace.IdentityReference) can modify the msPKI-Certificate-Name-Flag attribute, potentially enabling subject name spoofing to create ESC1 vulnerabilities."
                                         $includeIssue = $true
                                     }
                                     elseif ($objectTypeGuid -eq $MSPKIEnrollmentFlagGUID) {
-                                        $subtype = 'WriteProperty-Template-EnrollmentFlag'
+                                        $subtype = 'Template-WriteProperty-EnrollmentFlag'
                                         $issue = "$($ace.IdentityReference) can modify the msPKI-Enrollment-Flag attribute, potentially disabling security features like manager approval to create ESC1 vulnerabilities."
                                         $includeIssue = $true
                                     }
                                     elseif ($objectTypeGuid -eq $MSPKIRASignatureGUID) {
-                                        $subtype = 'WriteProperty-Template-RASignature'
+                                        $subtype = 'Template-WriteProperty-RASignature'
                                         $issue = "$($ace.IdentityReference) can modify the msPKI-RA-Signature attribute, potentially disabling registration authority signature requirements to create ESC1 vulnerabilities."
                                         $includeIssue = $true
                                     }
                                 }
                                 elseif ($ace.ActiveDirectoryRights -match 'WriteOwner') {
-                                    $subtype = 'WriteOwner-Template'
+                                    $subtype = 'Template-WriteOwner'
                                     $issue = "$($ace.IdentityReference) has WriteOwner rights on this certificate template, allowing them to take ownership and then modify template settings to create ESC1, ESC2, and ESC3 vulnerabilities."
                                     $includeIssue = $true
                                 }
                                 elseif ($ace.ActiveDirectoryRights -match 'WriteDacl') {
-                                    $subtype = 'WriteDacl-Template'
+                                    $subtype = 'Template-WriteDacl'
                                     $issue = "$($ace.IdentityReference) has WriteDacl rights on this certificate template, allowing them to grant themselves additional permissions to modify template settings and create ESC1, ESC2, and ESC3 vulnerabilities."
                                     $includeIssue = $true
                                 }
@@ -298,16 +298,16 @@ function Find-ESC4Issue {
 
                                     # Determine severity based on subtype
                                     $severity = switch ($subtype) {
-                                        'GenericAll-Template' { 'Critical' }
-                                        'GenericWrite-Template' { 'High' }
-                                        'WriteProperty-Template-AllObjects' { 'High' }
-                                        'Owner-Template' { 'Critical' }
-                                        'WriteDacl-Template' { 'High' }
-                                        'WriteOwner-Template' { 'Critical' }
-                                        'WriteProperty-Template-CertNameFlag' { 'Medium' }
-                                        'WriteProperty-Template-EnrollmentFlag' { 'Medium' }
-                                        'WriteProperty-Template-PKIExtendedKeyUsage' { 'Medium' }
-                                        'WriteProperty-Template-RASignature' { 'Medium' }
+                                        'Template-GenericAll' { 'Critical' }
+                                        'Template-GenericWrite' { 'High' }
+                                        'Template-WriteProperty-AllObjects' { 'Critical' }
+                                        'Template-Owner' { 'High' }
+                                        'Template-WriteDacl' { 'High' }
+                                        'Template-WriteOwner' { 'High' }
+                                        'Template-WriteProperty-CertNameFlag' { 'Medium' }
+                                        'Template-WriteProperty-EnrollmentFlag' { 'Medium' }
+                                        'Template-WriteProperty-PKIExtendedKeyUsage' { 'Medium' }
+                                        'Template-WriteProperty-RASignature' { 'Medium' }
                                         default { 'Medium' }
                                     }
 

@@ -18,7 +18,7 @@ function Find-ESC5p5Combo {
     param (
     )
 
-    #requires -Version 5
+    #requires -Version 7.4
 
     begin {
     }

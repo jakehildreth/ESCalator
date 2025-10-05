@@ -30,7 +30,7 @@ function Start-ESCalator {
         [switch]$ReportOnly
     )
 
-    #requires -Version 5
+    #requires -Version 7.4
 
     # Select random theme colors once at the start of the session
     $sessionColors = Get-GradientColors -Theme "Random" -Steps 5

@@ -35,6 +35,8 @@ function Get-MenuChoice {
         [switch]$AllowBack
     )
 
+    #requires -Version 7.4
+
     $validInput = $false
     $choice = $null  # Can now be integer, 'q', or 'b'
 

@@ -34,6 +34,8 @@ function Show-MenuOptions {
         [switch]$AllowBack
     )
 
+    #requires -Version 7.4
+
     # Display the menu
     Write-Host ""
     Write-Host $Title -ForegroundColor White

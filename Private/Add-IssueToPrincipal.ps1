@@ -45,6 +45,8 @@ function Add-IssueToPrincipal {
         [object[]]$Issues
     )
 
+    #requires -Version 7.4
+
     begin {
         Write-Verbose "Starting principal issue attachment..."
         

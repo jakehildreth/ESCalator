@@ -57,7 +57,7 @@ function Expand-SafeUsers {
         [System.DirectoryServices.DirectoryEntry[]]$AdcsObjects
     )
 
-    #requires -Version 5
+    #requires -Version 7.4
 
     begin {
         Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Starting $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."

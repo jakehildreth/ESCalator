@@ -35,7 +35,7 @@ function Get-AdcsObjects {
         [string]$Server
     )
 
-    #requires -Version 5 -Modules Microsoft.PowerShell.Security
+    #requires -Version 7.4 -Modules Microsoft.PowerShell.Security
 
     begin {
         # Get the configuration naming context

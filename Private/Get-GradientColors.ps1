@@ -143,6 +143,8 @@ function Get-GradientColors {
         [switch]$Legacy256Color
     )
 
+    #requires -Version 7.4
+
     # Predefined color themes
     $colorThemes = @{
         'Autumn'    = @{ Start = '#8B4513'; End = '#FF8C00' } # Saddle Brown to Dark Orange

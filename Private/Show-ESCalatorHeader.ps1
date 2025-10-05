@@ -51,6 +51,8 @@ function Show-ESCalatorHeader {
         [hashtable]$Color5
     )
 
+    #requires -Version 7.4
+
     Write-Host ""
     Write-Host "`e[38;2;$($Color1.R);$($Color1.G);$($Color1.B)m█        ███      ████      ████      ███  █████████      ███        ███      ███       ██`e[0m"
     Write-Host "`e[38;2;$($Color2.R);$($Color2.G);$($Color2.B)m█  ████████  ████████  ████  ██  ████  ██  ████████  ████  █████  █████  ████  ██  ████  █`e[0m"

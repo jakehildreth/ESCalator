@@ -107,7 +107,6 @@ function ConvertTo-ESC1 {
                     Template = $InputObject.Name
                     Error = "Not an ESC4 issue"
                     Changes = @()
-                    RevertScriptPath = $null
                 }
             }
             

@@ -78,8 +78,18 @@ function Find-ESC4e1 {
         
         # Determine target principal for analysis
         if ($Principal) {
-            $principalName = $Principal.Properties['sAMAccountName'].Value -or $Principal.Properties['name'].Value -or $Principal.Properties['distinguishedName'].Value
-            Write-Verbose "Analyzing Critical ESC4 issues with enabled templates for specific principal: $principalName"
+            # Get the principal name properly
+            $principalDisplayName = $null
+            if ($Principal.Properties['sAMAccountName'].Value) {
+                $principalDisplayName = $Principal.Properties['sAMAccountName'].Value
+            } elseif ($Principal.Properties['name'].Value) {
+                $principalDisplayName = $Principal.Properties['name'].Value
+            } elseif ($Principal.Properties['distinguishedName'].Value) {
+                $principalDisplayName = $Principal.Properties['distinguishedName'].Value
+            } else {
+                $principalDisplayName = "Unknown"
+            }
+            Write-Verbose "Analyzing Critical ESC4 issues with enabled templates for specific principal: $principalDisplayName"
         } else {
             # No principal specified - analyze for current user
             $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
@@ -151,8 +161,19 @@ function Find-ESC4e1 {
                 if ($Principal.Properties['objectSid'].Value) {
                     $principalSid = (New-Object System.Security.Principal.SecurityIdentifier($Principal.Properties['objectSid'].Value, 0)).Value
                 }
-                $principalName = $Principal.Properties['sAMAccountName'].Value -or $Principal.Properties['name'].Value
+                
+                # Fix the boolean issue with -or operator
+                $principalName = $null
+                if ($Principal.Properties['sAMAccountName'].Value) {
+                    $principalName = $Principal.Properties['sAMAccountName'].Value
+                } elseif ($Principal.Properties['name'].Value) {
+                    $principalName = $Principal.Properties['name'].Value
+                }
+                
                 $principalDN = $Principal.Properties['distinguishedName'].Value
+                
+                Write-Verbose "Checking issue against principal - SID: $principalSid, Name: $principalName, DN: $principalDN"
+                Write-Verbose "Issue details - Principal: '$($issue.Principal)', IdentityReferenceSID: '$($issue.IdentityReferenceSID)'"
                 
                 # Check if the issue applies to this principal
                 $appliesToPrincipal = $false

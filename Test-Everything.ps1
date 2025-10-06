@@ -29,11 +29,6 @@ $AllPrincipals = Get-IndividualPrincipals -Issues $OriginalIssues, $ExpandedIssu
 # Attach Issue objects to Principal Objects
 $AllPrincipals | Add-IssueToPrincipal -Issues $OriginalIssues, $ExpandedIssues | Out-Null
 
-# Test Find-ESC4e1 function
-Write-Host "Testing Find-ESC4e1 function..." -ForegroundColor Green
-$EnabledESC4Original = Find-ESC4e1 -Issues $OriginalIssues
-$EnabledESC4Expanded = Find-ESC4e1 -Issues $ExpandedIssues
-
 # Mini report
 $AllIssues = $OriginalIssues + $ExpandedIssues
 @"

@@ -237,7 +237,7 @@ function Find-ESC4p5Combo {
                 if (-not $principalCombinations[$principalKey]) {
                     $principalCombinations[$principalKey] = @{
                         PrincipalSID = $esc4Issue.IdentityReferenceSID
-                        PrincipalName = $esc4Issue.Principal
+                        PrincipalName = $esc4Issue.IdentityReference
                         ESC4dIssues = @()
                         ESC5EnrollmentIssues = @()
                     }

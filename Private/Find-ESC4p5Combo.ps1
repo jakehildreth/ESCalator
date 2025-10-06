@@ -1,17 +1,18 @@
 function Find-ESC4p5Combo {
     <#
         .SYNOPSIS
-        Finds Critical ESC4 and ESC5 vulnerability combinations for a specific principal or all principals.
+        Finds Critical ESC4 (enabled templates) and ESC5 (EnrollmentService subtypes) vulnerability combinations for a specific principal or current user.
 
         .DESCRIPTION
-        This function analyzes ESCalatorIssue objects to identify Critical ESC4 (Vulnerable Certificate Template Access Control)
-        and ESC5 (Vulnerable PKI Object Access Control) vulnerabilities that apply to a specific security principal.
+        This function analyzes ESCalatorIssue objects to identify dangerous combinations of:
+        1. Critical ESC4 vulnerabilities with enabled templates (using Find-ESC4e1)
+        2. Critical ESC5 vulnerabilities with EnrollmentService subtypes
+        
+        When a principal has both types of vulnerabilities, it represents a high-impact attack path where
+        the principal can both modify certificate templates (ESC4) and control enrollment services (ESC5).
 
-        If no principal is provided, the function will analyze Critical ESC4 and ESC5 issues that apply to the current user.
-        If a specific principal DirectoryEntry is provided, it will analyze issues for that principal instead.
-
-        The function filters for Critical severity ESC4 and ESC5 issues and returns combinations that represent
-        high-impact vulnerabilities where principals have dangerous permissions on certificate templates or PKI objects.
+        If no principal is provided, the function will analyze combinations that apply to the current user.
+        If a specific principal DirectoryEntry is provided, it will analyze combinations for that principal instead.
 
         .PARAMETER Issues
         An array of ESCalatorIssue objects to analyze. These should be the output from Find-ESC4Issue and Find-ESC5Issue
@@ -19,29 +20,30 @@ function Find-ESC4p5Combo {
 
         .PARAMETER Principal
         Optional. A DirectoryEntry object representing a specific security principal to analyze. If provided, the function
-        will only return Critical ESC4 and ESC5 issues that apply to this principal. If not provided, returns Critical
-        ESC4 and ESC5 issues that apply to the current user.
+        will only return combinations that apply to this principal. If not provided, returns combinations
+        that apply to the current user.
 
         .INPUTS
         ESCalatorIssue[]
         Array of ESCalatorIssue objects from ESC4 and ESC5 vulnerability scans.
 
         .OUTPUTS
-        ESCalatorIssue[]
-        Returns an array of ESCalatorIssue objects representing Critical ESC4 and ESC5 vulnerabilities.
+        PSCustomObject[]
+        Returns an array of custom objects representing dangerous ESC4e1 + ESC5 EnrollmentService combinations.
+        Each object contains details about both vulnerabilities and the affected principal.
 
         .EXAMPLE
-        # Analyze Critical ESC4/ESC5 issues for current user (no principal specified)
+        # Analyze ESC4e1/ESC5 combinations for current user (no principal specified)
         $allIssues = @()
         $allIssues += Find-ESC4Issue -AdcsObjects $AdcsObjects
         $allIssues += Find-ESC5Issue -AdcsObjects $AdcsObjects
         $expandedIssues = $allIssues | Expand-Issue
-        $criticalCombos = Find-ESC4p5Combo -Issues $expandedIssues
+        $dangerousCombos = Find-ESC4p5Combo -Issues $expandedIssues
 
         .EXAMPLE
-        # Analyze Critical ESC4/ESC5 issues for a specific user
-        $userPrincipal = Get-AdcsObjects | Where-Object { $_.Properties['sAMAccountName'].Value -eq 'testuser' }
-        $criticalCombos = Find-ESC4p5Combo -Issues $expandedIssues -Principal $userPrincipal
+        # Analyze ESC4e1/ESC5 combinations for a specific user
+        $userPrincipal = Get-DirectoryEntryByUsername -Username "testuser"
+        $dangerousCombos = Find-ESC4p5Combo -Issues $expandedIssues -Principal $userPrincipal
 
         .EXAMPLE
         # Pipeline usage
@@ -51,8 +53,12 @@ function Find-ESC4p5Combo {
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
 
         .NOTES
-        This function focuses specifically on Critical severity ESC4 and ESC5 issues as these represent
-        the highest risk combinations for privilege escalation via certificate services.
+        This function focuses on the most dangerous vulnerability combinations:
+        - ESC4 vulnerabilities with enabled templates (exploitable certificate template control)
+        - ESC5 vulnerabilities with EnrollmentService subtypes (CA/enrollment service control)
+        
+        The combination of these vulnerabilities allows an attacker to both modify certificate templates
+        and control the enrollment services, representing a critical security risk.
         
         The function requires that issues have been properly expanded using Expand-Issue to ensure
         individual principal analysis is possible.
@@ -73,136 +79,193 @@ function Find-ESC4p5Combo {
         Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Starting $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."
         
         # Initialize results array
-        $criticalCombos = @()
+        $dangerousCombinations = @()
         
-        # Determine target principal for analysis
+        # Get principal display name for logging
         if ($Principal) {
-            $principalName = $Principal.Properties['sAMAccountName'].Value -or $Principal.Properties['name'].Value -or $Principal.Properties['distinguishedName'].Value
-            Write-Verbose "Analyzing Critical ESC4/ESC5 combinations for specific principal: $principalName"
+            $principalDisplayName = $null
+            if ($Principal.Properties['sAMAccountName'].Value) {
+                $principalDisplayName = $Principal.Properties['sAMAccountName'].Value
+            } elseif ($Principal.Properties['name'].Value) {
+                $principalDisplayName = $Principal.Properties['name'].Value
+            } elseif ($Principal.Properties['distinguishedName'].Value) {
+                $principalDisplayName = $Principal.Properties['distinguishedName'].Value
+            } else {
+                $principalDisplayName = "Unknown"
+            }
+            Write-Verbose "Analyzing Critical ESC4e1/ESC5 combinations for specific principal: $principalDisplayName"
         } else {
-            # No principal specified - analyze for current user
             $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
-            $currentUserSid = $currentUser.User.Value
             $currentUserName = $currentUser.Name
-            Write-Verbose "No principal specified - analyzing Critical ESC4/ESC5 combinations for current user: $currentUserName (SID: $currentUserSid)"
-            
-            # Store current user info for comparison
-            $targetUserSid = $currentUserSid
-            $targetUserName = $currentUserName
+            Write-Verbose "No principal specified - analyzing Critical ESC4e1/ESC5 combinations for current user: $currentUserName"
         }
     }
 
     process {
-        # Process all issues in the current pipeline input
+        # Step 1: Find Critical ESC4 issues with enabled templates using Find-ESC4e1
+        Write-Verbose "Step 1: Finding Critical ESC4 issues with enabled templates..."
+        $esc4e1Issues = if ($Principal) {
+            Find-ESC4e1 -Issues $Issues -Principal $Principal
+        } else {
+            Find-ESC4e1 -Issues $Issues
+        }
+        
+        Write-Verbose "Found $($esc4e1Issues.Count) Critical ESC4 issue(s) with enabled templates"
+        
+        # Step 2: Find Critical ESC5 issues with EnrollmentService subtypes
+        Write-Verbose "Step 2: Finding Critical ESC5 issues with EnrollmentService subtypes..."
+        $esc5EnrollmentIssues = @()
+        
+        # Get principal info for ESC5 filtering
+        $targetPrincipalSid = $null
+        $targetPrincipalName = $null
+        
+        if ($Principal) {
+            if ($Principal.Properties['objectSid'].Value) {
+                $targetPrincipalSid = (New-Object System.Security.Principal.SecurityIdentifier($Principal.Properties['objectSid'].Value, 0)).Value
+            }
+            if ($Principal.Properties['sAMAccountName'].Value) {
+                $targetPrincipalName = $Principal.Properties['sAMAccountName'].Value
+            } elseif ($Principal.Properties['name'].Value) {
+                $targetPrincipalName = $Principal.Properties['name'].Value
+            }
+        } else {
+            $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+            $targetPrincipalSid = $currentUser.User.Value
+            $targetPrincipalName = $currentUser.Name
+        }
+        
+        # Filter for Critical ESC5 issues with EnrollmentService subtypes
         foreach ($issue in $Issues) {
-            # Validate that this is an ESCalatorIssue object
+            # Skip non-ESCalatorIssue objects
             if ($issue.PSObject.TypeNames[0] -ne 'ESCalatorIssue') {
-                Write-Warning "Skipping non-ESCalatorIssue object: $($issue.GetType().Name)"
                 continue
             }
             
-            # Filter for Critical ESC4 and ESC5 issues only
-            if ($issue.Technique -notin @('ESC4', 'ESC5')) {
-                Write-Verbose "Skipping non-ESC4/ESC5 issue: $($issue.Technique)"
+            # Filter for Critical ESC5 issues only
+            if ($issue.Technique -ne 'ESC5' -or $issue.Severity -ne 'Critical') {
                 continue
             }
             
-            if ($issue.Severity -ne 'Critical') {
-                Write-Verbose "Skipping non-Critical $($issue.Technique) issue: $($issue.Severity) severity"
+            # Filter for EnrollmentService subtypes
+            if ($issue.Subtype -notlike "EnrollmentService*") {
+                Write-Verbose "Skipping ESC5 issue with non-EnrollmentService subtype: $($issue.Subtype)"
                 continue
             }
             
-            # Filter for issues that apply to the target principal (specific principal or current user)
-            if ($Principal) {
-                # Specific principal provided - use existing logic
-                $principalSid = $null
-                $principalName = $null
-                
-                # Get principal identifiers for comparison
-                if ($Principal.Properties['objectSid'].Value) {
-                    $principalSid = (New-Object System.Security.Principal.SecurityIdentifier($Principal.Properties['objectSid'].Value, 0)).Value
-                }
-                $principalName = $Principal.Properties['sAMAccountName'].Value -or $Principal.Properties['name'].Value
-                $principalDN = $Principal.Properties['distinguishedName'].Value
-                
-                # Check if the issue applies to this principal
-                $appliesToPrincipal = $false
-                
-                # Check by SID if available
-                if ($principalSid -and $issue.IdentityReferenceSID) {
-                    if ($issue.IdentityReferenceSID -eq $principalSid) {
-                        $appliesToPrincipal = $true
-                        Write-Verbose "Issue matches principal by SID: $principalSid"
-                    }
-                }
-                
-                # Check by name if SID match fails
-                if (-not $appliesToPrincipal -and $principalName -and $issue.Principal) {
-                    if ($issue.Principal -like "*$principalName*" -or $issue.Principal -eq $principalName) {
-                        $appliesToPrincipal = $true
-                        Write-Verbose "Issue matches principal by name: $principalName"
-                    }
-                }
-                
-                # Check by DN if other matches fail
-                if (-not $appliesToPrincipal -and $principalDN -and $issue.Principal) {
-                    if ($issue.Principal -eq $principalDN) {
-                        $appliesToPrincipal = $true
-                        Write-Verbose "Issue matches principal by DN: $principalDN"
-                    }
-                }
-                
-                # Skip if this issue doesn't apply to the specified principal
-                if (-not $appliesToPrincipal) {
-                    Write-Verbose "Issue does not apply to specified principal, skipping"
-                    continue
-                }
-            } else {
-                # No principal specified - check if issue applies to current user
-                $appliesToCurrentUser = $false
-                
-                # Check by SID if available
-                if ($issue.IdentityReferenceSID -and $issue.IdentityReferenceSID -eq $targetUserSid) {
-                    $appliesToCurrentUser = $true
-                    Write-Verbose "Issue matches current user by SID: $targetUserSid"
-                }
-                
-                # Check by name if SID match fails
-                if (-not $appliesToCurrentUser -and $issue.Principal) {
-                    # Extract just the username from domain\username format
-                    $currentUserShortName = $targetUserName -replace '^.*\\', ''
-                    if ($issue.Principal -like "*$currentUserShortName*" -or $issue.Principal -like "*$targetUserName*") {
-                        $appliesToCurrentUser = $true
-                        Write-Verbose "Issue matches current user by name: $targetUserName"
-                    }
-                }
-                
-                # Skip if this issue doesn't apply to the current user
-                if (-not $appliesToCurrentUser) {
-                    Write-Verbose "Issue does not apply to current user, skipping"
-                    continue
+            # Check if issue applies to target principal
+            $appliesToPrincipal = $false
+            
+            # Check by SID
+            if ($targetPrincipalSid -and $issue.IdentityReferenceSID -eq $targetPrincipalSid) {
+                $appliesToPrincipal = $true
+                Write-Verbose "ESC5 issue matches principal by SID: $targetPrincipalSid"
+            }
+            
+            # Check by name if SID match fails
+            if (-not $appliesToPrincipal -and $targetPrincipalName -and $issue.Principal) {
+                $shortName = $targetPrincipalName -replace '^.*\\', ''
+                if ($issue.Principal -like "*$targetPrincipalName*" -or $issue.Principal -like "*$shortName*") {
+                    $appliesToPrincipal = $true
+                    Write-Verbose "ESC5 issue matches principal by name: $targetPrincipalName"
                 }
             }
             
-            # This is a Critical ESC4 or ESC5 issue that matches our criteria
-            Write-Verbose "Found Critical $($issue.Technique) issue: $($issue.Name) - $($issue.Principal)"
-            $criticalCombos += $issue
+            if ($appliesToPrincipal) {
+                $esc5EnrollmentIssues += $issue
+                Write-Verbose "Found Critical ESC5 EnrollmentService issue: $($issue.Name) - $($issue.Subtype)"
+            }
+        }
+        
+        Write-Verbose "Found $($esc5EnrollmentIssues.Count) Critical ESC5 EnrollmentService issue(s)"
+        
+        # Step 3: Create combination objects if both types exist
+        if ($esc4e1Issues.Count -gt 0 -and $esc5EnrollmentIssues.Count -gt 0) {
+            Write-Verbose "Step 3: Creating dangerous combination objects..."
+            
+            # Group issues by principal for combination analysis
+            $principalCombinations = @{}
+            
+            # Add ESC4e1 issues to combinations
+            foreach ($esc4Issue in $esc4e1Issues) {
+                $principalKey = $esc4Issue.IdentityReferenceSID -or $esc4Issue.Principal -or "Unknown"
+                if (-not $principalCombinations[$principalKey]) {
+                    $principalCombinations[$principalKey] = @{
+                        PrincipalSID = $esc4Issue.IdentityReferenceSID
+                        PrincipalName = $esc4Issue.Principal
+                        ESC4e1Issues = @()
+                        ESC5EnrollmentIssues = @()
+                    }
+                }
+                $principalCombinations[$principalKey].ESC4e1Issues += $esc4Issue
+            }
+            
+            # Add ESC5 enrollment issues to combinations
+            foreach ($esc5Issue in $esc5EnrollmentIssues) {
+                $principalKey = $esc5Issue.IdentityReferenceSID -or $esc5Issue.Principal -or "Unknown"
+                if ($principalCombinations[$principalKey]) {
+                    $principalCombinations[$principalKey].ESC5EnrollmentIssues += $esc5Issue
+                }
+            }
+            
+            # Create combination objects for principals with both types
+            foreach ($principalKey in $principalCombinations.Keys) {
+                $combo = $principalCombinations[$principalKey]
+                if ($combo.ESC4e1Issues.Count -gt 0 -and $combo.ESC5EnrollmentIssues.Count -gt 0) {
+                    $combinationObject = [PSCustomObject]@{
+                        PSTypeName = 'ESC4e1_ESC5_Combination'
+                        PrincipalSID = $combo.PrincipalSID
+                        PrincipalName = $combo.PrincipalName
+                        ESC4e1Count = $combo.ESC4e1Issues.Count
+                        ESC5EnrollmentCount = $combo.ESC5EnrollmentIssues.Count
+                        ESC4e1Issues = $combo.ESC4e1Issues
+                        ESC5EnrollmentIssues = $combo.ESC5EnrollmentIssues
+                        VulnerableTemplates = ($combo.ESC4e1Issues | ForEach-Object { 
+                            if ($_.DirectoryEntry -and $_.DirectoryEntry.Properties['name'].Value) {
+                                $_.DirectoryEntry.Properties['name'].Value
+                            }
+                        } | Sort-Object -Unique)
+                        EnrollmentServices = ($combo.ESC5EnrollmentIssues | ForEach-Object { $_.Name } | Sort-Object -Unique)
+                        RiskLevel = "Critical"
+                        AttackPath = "Template Modification (ESC4e1) + Enrollment Service Control (ESC5)"
+                    }
+                    
+                    $dangerousCombinations += $combinationObject
+                    Write-Verbose "Created dangerous combination for principal: $($combo.PrincipalName) (ESC4e1: $($combo.ESC4e1Issues.Count), ESC5: $($combo.ESC5EnrollmentIssues.Count))"
+                }
+            }
+        } else {
+            Write-Verbose "Step 3: No dangerous combinations found (ESC4e1: $($esc4e1Issues.Count), ESC5 EnrollmentService: $($esc5EnrollmentIssues.Count))"
         }
     }
 
     end {
-        Write-Verbose "Found $($criticalCombos.Count) Critical ESC4/ESC5 combination(s)"
+        Write-Verbose "Found $($dangerousCombinations.Count) dangerous ESC4e1/ESC5 combination(s)"
         
-        # Log summary by technique
-        $esc4Count = ($criticalCombos | Where-Object { $_.Technique -eq 'ESC4' }).Count
-        $esc5Count = ($criticalCombos | Where-Object { $_.Technique -eq 'ESC5' }).Count
-        
-        Write-Verbose "  ESC4 Critical issues: $esc4Count"
-        Write-Verbose "  ESC5 Critical issues: $esc5Count"
+        if ($dangerousCombinations.Count -gt 0) {
+            $totalESC4e1 = ($dangerousCombinations | Measure-Object -Property ESC4e1Count -Sum).Sum
+            $totalESC5 = ($dangerousCombinations | Measure-Object -Property ESC5EnrollmentCount -Sum).Sum
+            $uniquePrincipals = ($dangerousCombinations | Select-Object -ExpandProperty PrincipalName | Sort-Object -Unique).Count
+            
+            Write-Verbose "  Total ESC4e1 issues: $totalESC4e1"
+            Write-Verbose "  Total ESC5 EnrollmentService issues: $totalESC5"
+            Write-Verbose "  Affected principals: $uniquePrincipals"
+            
+            # Log vulnerable templates and services
+            $allTemplates = $dangerousCombinations | ForEach-Object { $_.VulnerableTemplates } | Sort-Object -Unique
+            $allServices = $dangerousCombinations | ForEach-Object { $_.EnrollmentServices } | Sort-Object -Unique
+            
+            if ($allTemplates) {
+                Write-Verbose "  Vulnerable templates: $($allTemplates -join ', ')"
+            }
+            if ($allServices) {
+                Write-Verbose "  Compromised enrollment services: $($allServices -join ', ')"
+            }
+        }
         
         Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Finishing $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."
         
-        # Return the results
-        return $criticalCombos
+        # Return the combination objects
+        return $dangerousCombinations
     }
 }

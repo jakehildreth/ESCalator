@@ -38,8 +38,4 @@ All Issues:      $($AllIssues.Count)
 ESC4s:           $($AllIssues.Where({$_.Technique -eq 'ESC4'}).Count)
 ESC5s:           $($AllIssues.Where({$_.Technique -eq 'ESC5'}).Count)
 All Principals:  $($AllPrincipals.Count)
-
-Find-ESC4e1 Results:
-Original Issues - Critical ESC4 with enabled templates: $($EnabledESC4Original.Count)
-Expanded Issues - Critical ESC4 with enabled templates: $($EnabledESC4Expanded.Count)
 "@

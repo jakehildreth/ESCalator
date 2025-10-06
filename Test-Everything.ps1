@@ -18,7 +18,7 @@ $OriginalIssues = @(
 )
 
 # Expand group ESCalatorIssue objects into individual principal ESCalatorIssue objects.
-$ExpandedIssues = $OriginalIssues | Expand-Issue
+$ExpandedIssues = $OriginalIssues | Expand-Issue | Where-Object ExpandedFromGroup
 
 # Attach Issue objects to AD CS objects (using both original and expanded issues)
 $AdcsObjects | Add-IssueToObject -Issues $OriginalIssues, $ExpandedIssues | Out-Null
@@ -29,6 +29,11 @@ $AllPrincipals = Get-IndividualPrincipals -Issues $OriginalIssues, $ExpandedIssu
 # Attach Issue objects to Principal Objects
 $AllPrincipals | Add-IssueToPrincipal -Issues $OriginalIssues, $ExpandedIssues | Out-Null
 
+# Test Find-ESC4e1 function
+Write-Host "Testing Find-ESC4e1 function..." -ForegroundColor Green
+$EnabledESC4Original = Find-ESC4e1 -Issues $OriginalIssues
+$EnabledESC4Expanded = Find-ESC4e1 -Issues $ExpandedIssues
+
 # Mini report
 $AllIssues = $OriginalIssues + $ExpandedIssues
 @"
@@ -38,4 +43,8 @@ All Issues:      $($AllIssues.Count)
 ESC4s:           $($AllIssues.Where({$_.Technique -eq 'ESC4'}).Count)
 ESC5s:           $($AllIssues.Where({$_.Technique -eq 'ESC5'}).Count)
 All Principals:  $($AllPrincipals.Count)
+
+Find-ESC4e1 Results:
+Original Issues - Critical ESC4 with enabled templates: $($EnabledESC4Original.Count)
+Expanded Issues - Critical ESC4 with enabled templates: $($EnabledESC4Expanded.Count)
 "@

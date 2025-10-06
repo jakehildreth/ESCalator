@@ -1,0 +1,3 @@
+# Ignore Output folder and all its contents
+Output/
+./Output/

@@ -1,5 +1,5 @@
 # Import all functions
-Set-Location -Path C:\Users\Administrator.horse\Documents\ESCalator
+Set-Location -Path ~\Documents\ESCalator
 Get-ChildItem ".\Private\*.ps1" | ForEach-Object { . $_ }
 Get-ChildItem ".\Public\*.ps1" | ForEach-Object { . $_ }
 

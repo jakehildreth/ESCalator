@@ -153,7 +153,7 @@ function Start-ESCalator {
         
         # Create menu options array
         $menuOptions = @(
-            "Current user/computer context",
+            "Current user",
             "Specific user/computer", 
             "Forest-wide analysis"
         )
@@ -167,9 +167,14 @@ function Start-ESCalator {
         switch ($choice) {
             1 {
                 Write-Host ""
-                Write-Host "You selected: Current user/computer context" -ForegroundColor Yellow
+                Write-Host "You selected: Current user" -ForegroundColor Yellow
                 Write-Host ""
-                Read-Host "Press Enter to continue"
+                
+                # Combine all issues for analysis
+                $AllIssues = $OriginalIssues + $ExpandedIssues
+                
+                # Launch the ESC Analysis Menu
+                Show-ESCAnalysisMenu -Issues $AllIssues
             }
             2 {
                 Write-Host ""

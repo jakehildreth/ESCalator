@@ -129,19 +129,16 @@ function Show-ESCAnalysisMenu {
     $attackDescriptions = @()
 
     if ($esc4e1Results.Count -gt 0) {
-        $attackDescriptions += "ESC4e1: Immediate template modification attack - Can modify enabled certificate templates for instant privilege escalation"
+        $attackDescriptions += "ESC4e1: Immediate template modification attack`n  - Can modify one or more enabled certificate templates for instant privilege escalation"
     }
 
     if ($esc4p5ComboResults.Count -gt 0) {
-        $attackDescriptions += "ESC4p5: Combined template control attack - Can enable disabled templates AND control enrollment services"
+        $attackDescriptions += "ESC4p5: Combined template control attack`n  - Can modify one or more disabled certificate templates AND enable disabled templates"
     }
 
     if ($esc5p5ComboResults.Count -gt 0) {
-        $attackDescriptions += "ESC5p5: Full PKI infrastructure control - Can control both certificate template containers AND enrollment services"
+        $attackDescriptions += "ESC5p5: Full PKI infrastructure control`n  - Can create new certificate templates AND enabled disabled templates"
     }
-
-    Write-Host "Total Attacks Found: $totalVulnerabilities" -ForegroundColor Red
-    Write-Host ""
 
     do {
         # Display attack descriptions
@@ -180,6 +177,10 @@ function Show-ESCAnalysisMenu {
                     1 {
                         if ($esc4e1Results.Count -gt 0) {
                             Show-ESC4e1AttackDetails -Results $esc4e1Results
+                        } elseif ($esc4p5ComboResults.Count -gt 0) {
+                            Show-ESC4p5AttackDetails -Results $esc4p5ComboResults
+                        } elseif ($esc5p5ComboResults.Count -gt 0) {
+                            Show-ESC5p5AttackDetails -Results $esc5p5ComboResults
                         }
                     }
                     2 {

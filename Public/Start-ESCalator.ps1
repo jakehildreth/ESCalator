@@ -223,7 +223,47 @@ function Start-ESCalator {
                 Write-Host ""
                 Write-Host "You selected: Forest-wide analysis" -ForegroundColor Yellow
                 Write-Host ""
-                Read-Host "Press Enter to continue"
+                
+                if ($AllPrincipals.Count -eq 0) {
+                    Write-Host "No principals found with ESC vulnerabilities." -ForegroundColor Yellow
+                    Write-Host ""
+                    Read-Host "Press Enter to continue"
+                } else {
+                    Write-Host "Analyzing $($AllPrincipals.Count) principals with ESC vulnerabilities..." -ForegroundColor Green
+                    Write-Host ""
+                    
+                    # Combine all issues for analysis
+                    $AllIssues = $OriginalIssues + $ExpandedIssues
+                    
+                    # Loop through each principal and show their analysis
+                    for ($i = 0; $i -lt $AllPrincipals.Count; $i++) {
+                        $principal = $AllPrincipals[$i]
+                        $principalName = $principal.Properties['sAMAccountName'].Value -or $principal.Properties['name'].Value -or "Unknown"
+                        
+                        Write-Host "=== Analyzing Principal $($i + 1) of $($AllPrincipals.Count): $principalName ===" -ForegroundColor Cyan
+                        Write-Host ""
+                        
+                        # Launch the ESC Analysis Menu for this principal
+                        Show-ESCAnalysisMenu -Issues $AllIssues -Principal $principal
+                        
+                        # If not the last principal, ask if user wants to continue
+                        if ($i -lt ($AllPrincipals.Count - 1)) {
+                            Write-Host ""
+                            Write-Host "Continue to next principal? (y/n, default=y): " -NoNewline -ForegroundColor Yellow
+                            $continue = Read-Host
+                            if ($continue.Trim().ToLower() -eq 'n') {
+                                Write-Host "Forest-wide analysis stopped by user." -ForegroundColor Yellow
+                                break
+                            }
+                            Write-Host ""
+                        }
+                    }
+                    
+                    Write-Host ""
+                    Write-Host "Forest-wide analysis complete." -ForegroundColor Green
+                    Write-Host ""
+                    Read-Host "Press Enter to return to main menu"
+                }
             }
             'q' {
                 Write-Host ""

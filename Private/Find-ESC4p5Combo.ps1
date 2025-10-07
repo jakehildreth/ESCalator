@@ -266,8 +266,25 @@ function Find-ESC4p5Combo {
                         ESC4dIssues = $combo.ESC4dIssues
                         ESC5EnrollmentIssues = $combo.ESC5EnrollmentIssues
                         VulnerableTemplates = ($combo.ESC4dIssues | ForEach-Object { 
+                            # Try multiple ways to get the template name
                             if ($_.DirectoryEntry -and $_.DirectoryEntry.Properties['name'].Value) {
                                 $_.DirectoryEntry.Properties['name'].Value
+                            } elseif ($_.TemplateName) {
+                                $_.TemplateName
+                            } elseif ($_.Name) {
+                                $_.Name
+                            } else {
+                                # Fallback: try to extract from DistinguishedName
+                                if ($_.DirectoryEntry -and $_.DirectoryEntry.Properties['distinguishedName'].Value) {
+                                    $dn = $_.DirectoryEntry.Properties['distinguishedName'].Value
+                                    if ($dn -match '^CN=([^,]+)') {
+                                        $matches[1]
+                                    } else {
+                                        "Unknown Template"
+                                    }
+                                } else {
+                                    "Unknown Template"
+                                }
                             }
                         } | Sort-Object -Unique)
                         EnrollmentServices = ($combo.ESC5EnrollmentIssues | ForEach-Object { $_.Name } | Sort-Object -Unique)

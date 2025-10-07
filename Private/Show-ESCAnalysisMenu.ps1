@@ -177,277 +177,28 @@ function Show-ESCAnalysisMenu {
                     1 {
                         if ($esc4e1Results.Count -gt 0) {
                             Show-ESC4e1AttackDetails -Results $esc4e1Results
-                            
-                            # If analyzing current user and ESC4e1 is available, offer to execute attack
-                            if (-not $Principal) {
-                                Write-Host ""
-                                Write-Host "=== Attack Execution ===" -ForegroundColor Red
-                                Write-Host ""
-                                Write-Host "This ESC4e1 vulnerability can be exploited immediately since you have the required permissions." -ForegroundColor Yellow
-                                Write-Host ""
-                                $executeChoice = Read-Host "Do you want to execute the ESC4e1 attack now? (y/N)"
-                                
-                                if ($executeChoice -match '^y|yes$') {
-                                    Write-Host ""
-                                    Write-Host "[!] Initiating ESC4e1 attack..." -ForegroundColor Red
-                                    Write-Host ""
-                                    
-                                    try {
-                                        # Execute the attack using the first available ESC4e1 result
-                                        $attackResult = Invoke-ESC4e1Attack -ESC4e1Result $esc4e1Results[0]
-                                        
-                                        if ($attackResult -and $attackResult.Success) {
-                                            Write-Host "[+] ESC4e1 attack completed successfully!" -ForegroundColor Green
-                                            Write-Host ""
-                                            Write-Host "Attack Summary:" -ForegroundColor Cyan
-                                            Write-Host "- Template Modified: $($attackResult.TemplateName)" -ForegroundColor White
-                                            Write-Host "- Certificate Requested: $($attackResult.CertificateRequested)" -ForegroundColor White
-                                            if ($attackResult.KirbiFile) {
-                                                Write-Host "- Ticket Generated: $($attackResult.KirbiFile)" -ForegroundColor White
-                                            }
-                                        } else {
-                                            # Write-Host "[-] ESC4e1 attack failed or encountered errors." -ForegroundColor Red
-                                            if ($attackResult.Error) {
-                                                Write-Host "Error: $($attackResult.Error)" -ForegroundColor Red
-                                            }
-                                        }
-                                    } catch {
-                                        Write-Host "[-] ESC4e1 attack failed with exception: $($_.Exception.Message)" -ForegroundColor Red
-                                    }
-                                } else {
-                                    Write-Host ""
-                                    Write-Host "[*] Attack execution cancelled by user." -ForegroundColor Yellow
-                                }
-                            }
+                            Invoke-InteractiveAttack -AttackType "ESC4e1" -AttackResult $esc4e1Results[0] -Principal $Principal
                         } elseif ($esc4p5ComboResults.Count -gt 0) {
                             Show-ESC4p5AttackDetails -Results $esc4p5ComboResults
-                            
-                            # If analyzing current user and ESC4p5 is available, offer to execute attack
-                            if (-not $Principal) {
-                                Write-Host ""
-                                Write-Host "=== Attack Execution ===" -ForegroundColor Red
-                                Write-Host ""
-                                Write-Host "This ESC4p5 vulnerability can be exploited immediately since you have the required permissions." -ForegroundColor Yellow
-                                Write-Host ""
-                                $executeChoice = Read-Host "Do you want to execute the ESC4p5 attack now? (y/N)"
-                                
-                                if ($executeChoice -match '^y|yes$') {
-                                    Write-Host ""
-                                    Write-Host "[!] Initiating ESC4p5 attack..." -ForegroundColor Red
-                                    Write-Host ""
-                                    
-                                    try {
-                                        # Execute the attack using the first available ESC4p5 result
-                                        $attackResult = Invoke-ESC4p5Attack -ESC4p5Result $esc4p5ComboResults[0]
-                                        
-                                        if ($attackResult -and $attackResult.Success) {
-                                            Write-Host "[+] ESC4p5 attack completed successfully!" -ForegroundColor Green
-                                            Write-Host ""
-                                            Write-Host "Attack Summary:" -ForegroundColor Cyan
-                                            Write-Host "- Template Modified: $($attackResult.TemplateName)" -ForegroundColor White
-                                            Write-Host "- Template Enabled: $($attackResult.TemplateEnabled)" -ForegroundColor White
-                                            Write-Host "- Certificate Requested: $($attackResult.CertificateRequested)" -ForegroundColor White
-                                            if ($attackResult.KirbiFile) {
-                                                Write-Host "- Ticket Generated: $($attackResult.KirbiFile)" -ForegroundColor White
-                                            }
-                                        } else {
-                                            if ($attackResult.Error) {
-                                                Write-Host "Error: $($attackResult.Error)" -ForegroundColor Red
-                                            }
-                                        }
-                                    } catch {
-                                        Write-Host "[-] ESC4p5 attack failed with exception: $($_.Exception.Message)" -ForegroundColor Red
-                                    }
-                                } else {
-                                    Write-Host ""
-                                    Write-Host "[*] Attack execution cancelled by user." -ForegroundColor Yellow
-                                }
-                            }
+                            Invoke-InteractiveAttack -AttackType "ESC4p5" -AttackResult $esc4p5ComboResults[0] -Principal $Principal
                         } elseif ($esc5p5ComboResults.Count -gt 0) {
                             Show-ESC5p5AttackDetails -Results $esc5p5ComboResults
-                            
-                            # If analyzing current user and ESC5p5 is available, offer to execute attack
-                            if (-not $Principal) {
-                                Write-Host ""
-                                Write-Host "=== Attack Execution ===" -ForegroundColor Red
-                                Write-Host ""
-                                Write-Host "This ESC5p5 vulnerability can be exploited immediately since you have the required permissions." -ForegroundColor Yellow
-                                Write-Host ""
-                                $executeChoice = Read-Host "Do you want to execute the ESC5p5 attack now? (y/N)"
-                                
-                                if ($executeChoice -match '^y|yes$') {
-                                    Write-Host ""
-                                    Write-Host "[!] Initiating ESC5p5 attack..." -ForegroundColor Red
-                                    Write-Host ""
-                                    
-                                    try {
-                                        # Execute the attack using the first available ESC5p5 result
-                                        $attackResult = Invoke-ESC5p5Attack -ESC5p5Result $esc5p5ComboResults[0]
-                                        
-                                        if ($attackResult -and $attackResult.Success) {
-                                            Write-Host "[+] ESC5p5 attack completed successfully!" -ForegroundColor Green
-                                            Write-Host ""
-                                            Write-Host "Attack Summary:" -ForegroundColor Cyan
-                                            Write-Host "- Template Created: $($attackResult.TemplateName)" -ForegroundColor White
-                                            Write-Host "- Template Configured: $($attackResult.TemplateConfigured)" -ForegroundColor White
-                                            Write-Host "- Template Enabled: $($attackResult.TemplateEnabled)" -ForegroundColor White
-                                            Write-Host "- Certificate Requested: $($attackResult.CertificateRequested)" -ForegroundColor White
-                                            if ($attackResult.KirbiFile) {
-                                                Write-Host "- Ticket Generated: $($attackResult.KirbiFile)" -ForegroundColor White
-                                            }
-                                        } else {
-                                            if ($attackResult.Error) {
-                                                Write-Host "Error: $($attackResult.Error)" -ForegroundColor Red
-                                            }
-                                        }
-                                    } catch {
-                                        Write-Host "[-] ESC5p5 attack failed with exception: $($_.Exception.Message)" -ForegroundColor Red
-                                    }
-                                } else {
-                                    Write-Host ""
-                                    Write-Host "[*] Attack execution cancelled by user." -ForegroundColor Yellow
-                                }
-                            }
+                            Invoke-InteractiveAttack -AttackType "ESC5p5" -AttackResult $esc5p5ComboResults[0] -Principal $Principal
                         }
                     }
                     2 {
                         if ($esc4p5ComboResults.Count -gt 0) {
                             Show-ESC4p5AttackDetails -Results $esc4p5ComboResults
-                            
-                            # If analyzing current user and ESC4p5 is available, offer to execute attack
-                            if (-not $Principal) {
-                                Write-Host ""
-                                Write-Host "=== Attack Execution ===" -ForegroundColor Red
-                                Write-Host ""
-                                Write-Host "This ESC4p5 vulnerability can be exploited immediately since you have the required permissions." -ForegroundColor Yellow
-                                Write-Host ""
-                                $executeChoice = Read-Host "Do you want to execute the ESC4p5 attack now? (y/N)"
-                                
-                                if ($executeChoice -match '^y|yes$') {
-                                    Write-Host ""
-                                    Write-Host "[!] Initiating ESC4p5 attack..." -ForegroundColor Red
-                                    Write-Host ""
-                                    
-                                    try {
-                                        # Execute the attack using the first available ESC4p5 result
-                                        $attackResult = Invoke-ESC4p5Attack -ESC4p5Result $esc4p5ComboResults[0]
-                                        
-                                        if ($attackResult -and $attackResult.Success) {
-                                            Write-Host "[+] ESC4p5 attack completed successfully!" -ForegroundColor Green
-                                            Write-Host ""
-                                            Write-Host "Attack Summary:" -ForegroundColor Cyan
-                                            Write-Host "- Template Modified: $($attackResult.TemplateName)" -ForegroundColor White
-                                            Write-Host "- Template Enabled: $($attackResult.TemplateEnabled)" -ForegroundColor White
-                                            Write-Host "- Certificate Requested: $($attackResult.CertificateRequested)" -ForegroundColor White
-                                            if ($attackResult.KirbiFile) {
-                                                Write-Host "- Ticket Generated: $($attackResult.KirbiFile)" -ForegroundColor White
-                                            }
-                                        } else {
-                                            if ($attackResult.Error) {
-                                                Write-Host "Error: $($attackResult.Error)" -ForegroundColor Red
-                                            }
-                                        }
-                                    } catch {
-                                        Write-Host "[-] ESC4p5 attack failed with exception: $($_.Exception.Message)" -ForegroundColor Red
-                                    }
-                                } else {
-                                    Write-Host ""
-                                    Write-Host "[*] Attack execution cancelled by user." -ForegroundColor Yellow
-                                }
-                            }
+                            Invoke-InteractiveAttack -AttackType "ESC4p5" -AttackResult $esc4p5ComboResults[0] -Principal $Principal
                         } elseif ($esc5p5ComboResults.Count -gt 0) {
                             Show-ESC5p5AttackDetails -Results $esc5p5ComboResults
-                            
-                            # If analyzing current user and ESC5p5 is available, offer to execute attack
-                            if (-not $Principal) {
-                                Write-Host ""
-                                Write-Host "=== Attack Execution ===" -ForegroundColor Red
-                                Write-Host ""
-                                Write-Host "This ESC5p5 vulnerability can be exploited immediately since you have the required permissions." -ForegroundColor Yellow
-                                Write-Host ""
-                                $executeChoice = Read-Host "Do you want to execute the ESC5p5 attack now? (y/N)"
-                                
-                                if ($executeChoice -match '^y|yes$') {
-                                    Write-Host ""
-                                    Write-Host "[!] Initiating ESC5p5 attack..." -ForegroundColor Red
-                                    Write-Host ""
-                                    
-                                    try {
-                                        # Execute the attack using the first available ESC5p5 result
-                                        $attackResult = Invoke-ESC5p5Attack -ESC5p5Result $esc5p5ComboResults[0]
-                                        
-                                        if ($attackResult -and $attackResult.Success) {
-                                            Write-Host "[+] ESC5p5 attack completed successfully!" -ForegroundColor Green
-                                            Write-Host ""
-                                            Write-Host "Attack Summary:" -ForegroundColor Cyan
-                                            Write-Host "- Template Created: $($attackResult.TemplateName)" -ForegroundColor White
-                                            Write-Host "- Template Configured: $($attackResult.TemplateConfigured)" -ForegroundColor White
-                                            Write-Host "- Template Enabled: $($attackResult.TemplateEnabled)" -ForegroundColor White
-                                            Write-Host "- Certificate Requested: $($attackResult.CertificateRequested)" -ForegroundColor White
-                                            if ($attackResult.KirbiFile) {
-                                                Write-Host "- Ticket Generated: $($attackResult.KirbiFile)" -ForegroundColor White
-                                            }
-                                        } else {
-                                            if ($attackResult.Error) {
-                                                Write-Host "Error: $($attackResult.Error)" -ForegroundColor Red
-                                            }
-                                        }
-                                    } catch {
-                                        Write-Host "[-] ESC5p5 attack failed with exception: $($_.Exception.Message)" -ForegroundColor Red
-                                    }
-                                } else {
-                                    Write-Host ""
-                                    Write-Host "[*] Attack execution cancelled by user." -ForegroundColor Yellow
-                                }
-                            }
+                            Invoke-InteractiveAttack -AttackType "ESC5p5" -AttackResult $esc5p5ComboResults[0] -Principal $Principal
                         }
                     }
                     3 {
                         if ($esc5p5ComboResults.Count -gt 0) {
                             Show-ESC5p5AttackDetails -Results $esc5p5ComboResults
-                            
-                            # If analyzing current user and ESC5p5 is available, offer to execute attack
-                            if (-not $Principal) {
-                                Write-Host ""
-                                Write-Host "=== Attack Execution ===" -ForegroundColor Red
-                                Write-Host ""
-                                Write-Host "This ESC5p5 vulnerability can be exploited immediately since you have the required permissions." -ForegroundColor Yellow
-                                Write-Host ""
-                                $executeChoice = Read-Host "Do you want to execute the ESC5p5 attack now? (y/N)"
-                                
-                                if ($executeChoice -match '^y|yes$') {
-                                    Write-Host ""
-                                    Write-Host "[!] Initiating ESC5p5 attack..." -ForegroundColor Red
-                                    Write-Host ""
-                                    
-                                    try {
-                                        # Execute the attack using the first available ESC5p5 result
-                                        $attackResult = Invoke-ESC5p5Attack -ESC5p5Result $esc5p5ComboResults[0]
-                                        
-                                        if ($attackResult -and $attackResult.Success) {
-                                            Write-Host "[+] ESC5p5 attack completed successfully!" -ForegroundColor Green
-                                            Write-Host ""
-                                            Write-Host "Attack Summary:" -ForegroundColor Cyan
-                                            Write-Host "- Template Created: $($attackResult.TemplateName)" -ForegroundColor White
-                                            Write-Host "- Template Configured: $($attackResult.TemplateConfigured)" -ForegroundColor White
-                                            Write-Host "- Template Enabled: $($attackResult.TemplateEnabled)" -ForegroundColor White
-                                            Write-Host "- Certificate Requested: $($attackResult.CertificateRequested)" -ForegroundColor White
-                                            if ($attackResult.KirbiFile) {
-                                                Write-Host "- Ticket Generated: $($attackResult.KirbiFile)" -ForegroundColor White
-                                            }
-                                        } else {
-                                            if ($attackResult.Error) {
-                                                Write-Host "Error: $($attackResult.Error)" -ForegroundColor Red
-                                            }
-                                        }
-                                    } catch {
-                                        Write-Host "[-] ESC5p5 attack failed with exception: $($_.Exception.Message)" -ForegroundColor Red
-                                    }
-                                } else {
-                                    Write-Host ""
-                                    Write-Host "[*] Attack execution cancelled by user." -ForegroundColor Yellow
-                                }
-                            }
+                            Invoke-InteractiveAttack -AttackType "ESC5p5" -AttackResult $esc5p5ComboResults[0] -Principal $Principal
                         }
                     }
                 }

@@ -118,8 +118,8 @@ function Show-ESCAnalysisMenu {
         Write-Host ""
         Write-Host "The analyzed principal does not have any of the following vulnerability combinations:" -ForegroundColor Gray
         Write-Host "  - ESC4e1: Critical ESC4 with enabled templates" -ForegroundColor Gray
-        Write-Host "  - ESC4p5: ESC4 (disabled templates) + ESC5 (EnrollmentService) combinations" -ForegroundColor Gray
-        Write-Host "  - ESC5p5: ESC5 CertTemplatesContainer + EnrollmentService combinations" -ForegroundColor Gray
+        Write-Host "  - ESC4p5: ESC4 (disabled templates) + ESC5 (pKIEnrollmentService certificateTemplates attribute) combinations" -ForegroundColor Gray
+        Write-Host "  - ESC5p5: ESC5 (Certificate Templates container) + ESC5 (pKIEnrollmentService certificateTemplates attribute) combinations" -ForegroundColor Gray
         Write-Host ""
         Read-Host "Press Enter to continue"
         return

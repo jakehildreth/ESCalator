@@ -281,7 +281,7 @@ function Find-ESC4e1 {
                     }
                 } | Sort-Object -Unique | Measure-Object).Count
                 RiskLevel = "Critical"
-                AttackPath = "Template Modification (ESC4e1)"
+                Attack = "Template Modification (ESC4e1)"
                 Technique = "ESC4"
                 EnabledStatus = "Enabled"
             }

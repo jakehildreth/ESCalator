@@ -272,7 +272,7 @@ function Find-ESC4p5Combo {
                         } | Sort-Object -Unique)
                         EnrollmentServices = ($combo.ESC5EnrollmentIssues | ForEach-Object { $_.Name } | Sort-Object -Unique)
                         RiskLevel = "Critical"
-                        AttackPath = "Template Modification (ESC4) + Template Enablement (ESC5)"
+                        Attack = "Template Modification (ESC4) + Template Enablement (ESC5)"
                     }
                     
                     $dangerousCombinations += $combinationObject

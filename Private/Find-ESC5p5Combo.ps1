@@ -207,7 +207,7 @@ function Find-ESC5p5Combo {
                         CertTemplatesSubtypes = ($combo.ESC5CertTemplatesIssues | ForEach-Object { $_.Subtype } | Sort-Object -Unique)
                         EnrollmentSubtypes = ($combo.ESC5EnrollmentIssues | ForEach-Object { $_.Subtype } | Sort-Object -Unique)
                         RiskLevel = "Critical"
-                        AttackPath = "Certificate Templates Container Control (ESC5) + Template Enablement (ESC5)"
+                        Attack = "Certificate Templates Container Control (ESC5) + Template Enablement (ESC5)"
                     }
                     
                     $dangerousCombinations += $combinationObject

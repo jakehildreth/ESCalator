@@ -176,8 +176,7 @@ function Show-ESCAnalysisMenu {
                 switch ($numericChoice) {
                     1 {
                         if ($esc4e1Results.Count -gt 0) {
-                            Show-ESC4e1AttackDetails -Results $esc4e1Results
-                            Invoke-InteractiveAttack -AttackType "ESC4e1" -AttackResult $esc4e1Results[0] -Principal $Principal
+                            Show-ESC4e1AttackDetails -Results $esc4e1Results -Principal $Principal
                         } elseif ($esc4p5ComboResults.Count -gt 0) {
                             Show-ESC4p5AttackDetails -Results $esc4p5ComboResults
                             Invoke-InteractiveAttack -AttackType "ESC4p5" -AttackResult $esc4p5ComboResults[0] -Principal $Principal

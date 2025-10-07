@@ -180,7 +180,44 @@ function Start-ESCalator {
                 Write-Host ""
                 Write-Host "You selected: Specific user/computer" -ForegroundColor Yellow
                 Write-Host ""
-                Read-Host "Press Enter to continue"
+                
+                # Prompt for username
+                Write-Host "Enter the username to analyze (e.g., 'testuser' or 'DOMAIN\testuser'):" -ForegroundColor Cyan
+                $username = Read-Host "Username"
+                
+                if ([string]::IsNullOrWhiteSpace($username)) {
+                    Write-Host "No username provided. Returning to main menu." -ForegroundColor Red
+                    Write-Host ""
+                    Read-Host "Press Enter to continue"
+                } else {
+                    try {
+                        Write-Host ""
+                        Write-Host "Looking up user: $username..." -ForegroundColor Yellow
+                        
+                        # Get DirectoryEntry object for the specified username
+                        $userPrincipal = Get-DirectoryEntryByUsername -Username $username
+                        
+                        if ($userPrincipal) {
+                            $displayName = $userPrincipal.Properties['sAMAccountName'].Value -or $userPrincipal.Properties['name'].Value -or $username
+                            Write-Host "Found user: $displayName" -ForegroundColor Green
+                            Write-Host ""
+                            
+                            # Combine all issues for analysis
+                            $AllIssues = $OriginalIssues + $ExpandedIssues
+                            
+                            # Launch the ESC Analysis Menu with the specific principal
+                            Show-ESCAnalysisMenu -Issues $AllIssues -Principal $userPrincipal
+                        } else {
+                            Write-Host "User '$username' not found." -ForegroundColor Red
+                            Write-Host ""
+                            Read-Host "Press Enter to continue"
+                        }
+                    } catch {
+                        Write-Host "Error looking up user '$username': $($_.Exception.Message)" -ForegroundColor Red
+                        Write-Host ""
+                        Read-Host "Press Enter to continue"
+                    }
+                }
             }
             3 {
                 Write-Host ""

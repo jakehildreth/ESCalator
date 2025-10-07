@@ -32,7 +32,9 @@ function Show-ESC4e1AttackDetails {
                 
                 if ($templateIssues) {
                     $uniqueRights = $templateIssues | ForEach-Object { $_.ActiveDirectoryRights } | Sort-Object -Unique
+                    $uniqueSubtypes = $templateIssues | ForEach-Object { $_.Subtype } | Sort-Object -Unique
                     Write-Host "    - Rights: $($uniqueRights -join ', ')" -ForegroundColor Gray
+                    Write-Host "    - Subtypes: $($uniqueSubtypes -join ', ')" -ForegroundColor Gray
                 }
             }
         }

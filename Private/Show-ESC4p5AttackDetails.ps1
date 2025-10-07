@@ -34,7 +34,9 @@ function Show-ESC4p5AttackDetails {
                 
                 if ($templateIssues) {
                     $uniqueRights = $templateIssues | ForEach-Object { $_.ActiveDirectoryRights } | Sort-Object -Unique
+                    $uniqueSubtypes = $templateIssues | ForEach-Object { $_.Subtype } | Sort-Object -Unique
                     Write-Host "      - Rights: $($uniqueRights -join ', ')" -ForegroundColor Gray
+                    Write-Host "      - Subtypes: $($uniqueSubtypes -join ', ')" -ForegroundColor Gray
                 }
             }
         }
@@ -50,7 +52,9 @@ function Show-ESC4p5AttackDetails {
                 
                 if ($serviceIssues) {
                     $uniqueRights = $serviceIssues | ForEach-Object { $_.ActiveDirectoryRights } | Sort-Object -Unique
+                    $uniqueSubtypes = $serviceIssues | ForEach-Object { $_.Subtype } | Sort-Object -Unique
                     Write-Host "      - Rights: $($uniqueRights -join ', ')" -ForegroundColor Gray
+                    Write-Host "      - Subtypes: $($uniqueSubtypes -join ', ')" -ForegroundColor Gray
                 }
             }
         }

@@ -140,12 +140,12 @@ function Show-ESCAnalysisMenu {
         $attackDescriptions += "ESC5p5: Full PKI infrastructure control - Can control both certificate template containers AND enrollment services"
     }
 
-    Write-Host "Total Attack Vectors Found: $totalVulnerabilities" -ForegroundColor Red
+    Write-Host "Total Attacks Found: $totalVulnerabilities" -ForegroundColor Red
     Write-Host ""
 
     do {
         # Display attack descriptions
-        Write-Host "Available Attack Vectors:" -ForegroundColor Yellow
+        Write-Host "Available Attacks:" -ForegroundColor Yellow
         Write-Host ""
         
         for ($i = 0; $i -lt $attackDescriptions.Count; $i++) {
@@ -158,7 +158,7 @@ function Show-ESCAnalysisMenu {
         Write-Host ""
 
         # Get user choice
-        Write-Host "`e[1mSelect an attack vector to explore`e[0m" -NoNewline
+        Write-Host "`e[1mSelect an attack to explore`e[0m" -NoNewline
         Write-Host " (1-$($attackDescriptions.Count), q=quit): " -NoNewline
         $choice = Read-Host
 

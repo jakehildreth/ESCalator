@@ -27,8 +27,9 @@ function Find-ESC4e1 {
         Array of ESCalatorIssue objects from ESC4 vulnerability scans.
 
         .OUTPUTS
-        ESCalatorIssue[]
-        Returns an array of ESCalatorIssue objects representing Critical ESC4 vulnerabilities with enabled templates.
+        PSCustomObject[]
+        Returns an array of custom objects representing Critical ESC4 vulnerabilities with enabled templates.
+        Each object contains details about the vulnerability, affected principal, and enabled templates.
 
         .EXAMPLE
         # Analyze Critical ESC4 issues with enabled templates for current user (no principal specified)
@@ -243,20 +244,67 @@ function Find-ESC4e1 {
     end {
         Write-Verbose "Found $($enabledESC4Issues.Count) Critical ESC4 issue(s) with enabled templates"
         
-        # Log summary with template names
-        if ($enabledESC4Issues.Count -gt 0) {
-            $templateNames = $enabledESC4Issues | ForEach-Object { 
-                if ($_.DirectoryEntry -and $_.DirectoryEntry.Properties['name'].Value) {
-                    $_.DirectoryEntry.Properties['name'].Value
+        # Group issues by principal and create structured objects
+        $principalGroups = @{}
+        $structuredResults = @()
+        
+        # Group issues by principal
+        foreach ($issue in $enabledESC4Issues) {
+            $principalKey = $issue.IdentityReferenceSID -or $issue.IdentityReference -or "Unknown"
+            if (-not $principalGroups[$principalKey]) {
+                $principalGroups[$principalKey] = @{
+                    PrincipalSID = $issue.IdentityReferenceSID
+                    PrincipalName = $issue.IdentityReference
+                    Issues = @()
                 }
-            } | Sort-Object -Unique
+            }
+            $principalGroups[$principalKey].Issues += $issue
+        }
+        
+        # Create structured objects for each principal
+        foreach ($principalKey in $principalGroups.Keys) {
+            $group = $principalGroups[$principalKey]
+            $structuredObject = [PSCustomObject]@{
+                PSTypeName = 'ESC4e1_Result'
+                PrincipalSID = $group.PrincipalSID
+                PrincipalName = $group.PrincipalName
+                ESC4e1Count = $group.Issues.Count
+                ESC4e1Issues = $group.Issues
+                VulnerableTemplates = ($group.Issues | ForEach-Object {
+                    if ($_.DirectoryEntry -and $_.DirectoryEntry.Properties['name'].Value) {
+                        $_.DirectoryEntry.Properties['name'].Value
+                    }
+                } | Sort-Object -Unique)
+                EnabledTemplateCount = ($group.Issues | ForEach-Object {
+                    if ($_.DirectoryEntry -and $_.DirectoryEntry.Properties['name'].Value) {
+                        $_.DirectoryEntry.Properties['name'].Value
+                    }
+                } | Sort-Object -Unique | Measure-Object).Count
+                RiskLevel = "Critical"
+                AttackPath = "Template Modification (ESC4e1)"
+                Technique = "ESC4"
+                EnabledStatus = "Enabled"
+            }
             
-            Write-Verbose "  Enabled vulnerable templates: $($templateNames -join ', ')"
+            $structuredResults += $structuredObject
+            Write-Verbose "Created ESC4e1 result for principal: $($group.PrincipalName) (Issues: $($group.Issues.Count), Templates: $($structuredObject.EnabledTemplateCount))"
+        }
+        
+        if ($structuredResults.Count -gt 0) {
+            $totalIssues = ($structuredResults | Measure-Object -Property ESC4e1Count -Sum).Sum
+            $uniquePrincipals = ($structuredResults | Select-Object -ExpandProperty PrincipalName | Sort-Object -Unique).Count
+            $allTemplates = $structuredResults | ForEach-Object { $_.VulnerableTemplates } | Sort-Object -Unique
+            
+            Write-Verbose "  Total ESC4e1 issues: $totalIssues"
+            Write-Verbose "  Affected principals: $uniquePrincipals"
+            if ($allTemplates) {
+                Write-Verbose "  Enabled vulnerable templates: $($allTemplates -join ', ')"
+            }
         }
         
         Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Finishing $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."
         
-        # Return the results
-        return $enabledESC4Issues
+        # Return the structured results
+        return $structuredResults
     }
 }

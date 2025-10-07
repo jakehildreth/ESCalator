@@ -117,9 +117,9 @@ function Show-ESCAnalysisMenu {
         Write-Host "[+] No ESC vulnerabilities found for this principal!" -ForegroundColor Green
         Write-Host ""
         Write-Host "The analyzed principal does not have any of the following vulnerability combinations:" -ForegroundColor Gray
-        Write-Host "  • ESC4e1: Critical ESC4 with enabled templates" -ForegroundColor Gray
-        Write-Host "  • ESC4p5: ESC4 (disabled templates) + ESC5 (EnrollmentService) combinations" -ForegroundColor Gray
-        Write-Host "  • ESC5p5: ESC5 CertTemplatesContainer + EnrollmentService combinations" -ForegroundColor Gray
+        Write-Host "  - ESC4e1: Critical ESC4 with enabled templates" -ForegroundColor Gray
+        Write-Host "  - ESC4p5: ESC4 (disabled templates) + ESC5 (EnrollmentService) combinations" -ForegroundColor Gray
+        Write-Host "  - ESC5p5: ESC5 CertTemplatesContainer + EnrollmentService combinations" -ForegroundColor Gray
         Write-Host ""
         Read-Host "Press Enter to continue"
         return
@@ -209,82 +209,4 @@ function Show-ESCAnalysisMenu {
     } while ($choice -ne 'q')
 
     Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Finishing $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."
-}
-
-function Show-ESC4e1AttackDetails {
-    <#
-        .SYNOPSIS
-        Shows attack details for ESC4e1 vulnerabilities.
-    #>
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory)]
-        [array]$Results
-    )
-
-    Write-Host "=== ESC4e1: Immediate Template Modification Attack ===" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Attack Description:" -ForegroundColor Yellow
-    Write-Host "The principal can immediately modify certificate templates that are enabled on Certificate Authorities." -ForegroundColor White
-    Write-Host "This allows for instant privilege escalation by changing template properties to make them vulnerable." -ForegroundColor White
-    Write-Host ""
-    Write-Host "Attack Steps:" -ForegroundColor Yellow
-    Write-Host "1. Modify the identified certificate template to match ESC1 requirements:`n  - Subject Alternative Name (SAN) allowed`n  - Client Authentication EKU`n  - No Manager Approval`n  - Enrollment Rights Assigned" -ForegroundColor Gray
-    Write-Host "2. Request a certificate with a SAN of a privileged account" -ForegroundColor Gray
-    Write-Host "3. Use the certificate to authenticate as the privileged account" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "Risk Level: CRITICAL - Immediate exploitation possible" -ForegroundColor Red
-}
-
-function Show-ESC4p5AttackDetails {
-    <#
-        .SYNOPSIS
-        Shows attack details for ESC4p5Combo vulnerabilities.
-    #>
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory)]
-        [array]$Results
-    )
-
-    Write-Host "=== ESC4p5: Combined Template Control Attack ===" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Attack Description:" -ForegroundColor Yellow
-    Write-Host "The principal can control both disabled certificate templates AND enrollment services." -ForegroundColor White
-    Write-Host "This combination allows enabling vulnerable templates and controlling their deployment." -ForegroundColor White
-    Write-Host ""
-    Write-Host "Attack Steps:" -ForegroundColor Yellow
-    Write-Host "1. Modify the identified certificate template to match ESC1 requirements:`n  - Subject Alternative Name (SAN) allowed`n  - Client Authentication EKU`n  - No Manager Approval`n  - Enrollment Rights Assigned" -ForegroundColor Gray
-    Write-Host "2. Enable the certificate template" -ForegroundColor Gray
-    Write-Host "3. Request a certificate with the SAN of a privileged account" -ForegroundColor Gray
-    Write-Host "4. Use the certificate to authenticate as the privileged account" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "Risk Level: CRITICAL - Multi-stage attack with full template control" -ForegroundColor Red
-}
-
-function Show-ESC5p5AttackDetails {
-    <#
-        .SYNOPSIS
-        Shows attack details for ESC5p5Combo vulnerabilities.
-    #>
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory)]
-        [array]$Results
-    )
-
-    Write-Host "=== ESC5p5: Full PKI Infrastructure Control ===" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Attack Description:" -ForegroundColor Yellow
-    Write-Host "The principal has comprehensive control over PKI infrastructure including both" -ForegroundColor White
-    Write-Host "certificate template containers AND enrollment services." -ForegroundColor White
-    Write-Host ""
-    Write-Host "Attack Steps:" -ForegroundColor Yellow
-    Write-Host "1. Create a new blank certificate template" -ForegroundColor Gray
-    Write-Host "2. Modify the blank certificate template to match ESC1 requirements:`n  - Subject Alternative Name (SAN) allowed`n  - Client Authentication EKU`n  - No Manager Approval`n  - Enrollment Rights Assigned" -ForegroundColor Gray
-    Write-Host "3. Enable the new certificate template" -ForegroundColor Gray
-    Write-Host "4. Request a certificate with the SAN of a privileged account" -ForegroundColor Gray
-    Write-Host "5. Use the certificate to authenticate as the privileged account" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "Risk Level: CRITICAL - Complete PKI infrastructure compromise" -ForegroundColor Red
 }

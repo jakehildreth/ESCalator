@@ -1299,10 +1299,14 @@ namespace ESCalator.Pkinit
 
     internal class KdcKeyAgreement
     {
-        // ECDH (RFC 5349) — Server 2025 KDCs reject MODP DH with error 60
-        private readonly EcdhKeyExchange _ecdh = new EcdhKeyExchange();
+        // MODP DH (Oakley Group 14) — Rubeus parity. Server 2022 KDCs accept MODP;
+        // the ECDH path was rejected with KRB-ERROR 41 on Server 2025.
+        private readonly DhKeyExchange _dh = new DhKeyExchange();
 
-        public byte[] Y { get { return _ecdh.PublicKeyPointBytes; } }
+        // MODP public value Y = g^x mod p (big-endian, prime length)
+        public byte[] Y { get { return _dh.PublicValueBytes; } }
+        public byte[] P { get { return _dh.PrimeBytes; } }
+        public byte[] G { get { return _dh.GeneratorBytes; } }
 
         private static byte[] CalculateIntegrity(byte count, byte[] data)
         {
@@ -1342,7 +1346,7 @@ namespace ESCalator.Pkinit
         // clientNonce: empty for the basic flow. serverNonce from PA-PK-AS-REP.
         public byte[] GenerateKey(byte[] kdcPublicKey, byte[] clientNonce, byte[] serverNonce, int size)
         {
-            byte[] sharedSecret = _ecdh.ComputeSharedSecret(kdcPublicKey);
+            byte[] sharedSecret = _dh.ComputeSharedSecret(kdcPublicKey);
             byte[] x = new byte[sharedSecret.Length + clientNonce.Length + serverNonce.Length];
             Buffer.BlockCopy(sharedSecret, 0, x, 0, sharedSecret.Length);
             Buffer.BlockCopy(clientNonce, 0, x, sharedSecret.Length, clientNonce.Length);

@@ -16,13 +16,11 @@ function ConvertTo-NtdsSidExtension {
                 value      [0] OCTET STRING (ASCII SID string, e.g. "S-1-5-21-...-500")
             }
 
-        Specifically the bytes are:
+        Specifically the bytes are (Certify EncodeSidExtension layout):
             SEQUENCE {
-              [0] EXPLICIT {  -- context tag 0, constructed
-                SEQUENCE {
-                  OID 1.3.6.1.4.1.311.25.2.1,
-                  [0] EXPLICIT { OCTET STRING (sid ascii) }
-                }
+              [0] EXPLICIT {  -- context tag 0, constructed (OtherName content, no inner SEQUENCE)
+                OID 1.3.6.1.4.1.311.25.2.1,
+                [0] EXPLICIT { OCTET STRING (sid ascii) }
               }
             }
 
@@ -69,16 +67,18 @@ function ConvertTo-NtdsSidExtension {
     $explicitOctet = [System.Collections.Generic.List[byte]]::new()
     Add-Element $explicitOctet 0xA0 $sidOctet.ToArray()
 
-    # SEQUENCE { OID, [0] OCTET STRING }
-    $innerSeq = [System.Collections.Generic.List[byte]]::new()
-    Add-Element $innerSeq 0x06 $oidBytes
-    $innerSeq.AddRange([byte[]]$explicitOctet.ToArray())
-    $innerSeqBytes = [System.Collections.Generic.List[byte]]::new()
-    Add-Element $innerSeqBytes 0x30 $innerSeq.ToArray()
+    # [0] EXPLICIT OtherName content: OID (type-id) + [0] EXPLICIT OCTET STRING (value).
+    # Certify's EncodeSidExtension puts the OID and value DIRECTLY inside the outer [0],
+    # with no intermediate SEQUENCE. (A previous version wrapped them in 0x30 SEQUENCE,
+    # producing a 2-byte-longer value the KDC's strong-mapping parser rejected with
+    # KRB-ERROR 60.)
+    $otherNameContent = [System.Collections.Generic.List[byte]]::new()
+    Add-Element $otherNameContent 0x06 $oidBytes
+    $otherNameContent.AddRange([byte[]]$explicitOctet.ToArray())
 
-    # [0] EXPLICIT around the inner sequence (OtherName value): A0 <len> <innerSeq>
+    # Outer [0] EXPLICIT wraps the OtherName content directly.
     $outerExplicit = [System.Collections.Generic.List[byte]]::new()
-    Add-Element $outerExplicit 0xA0 $innerSeqBytes.ToArray()
+    Add-Element $outerExplicit 0xA0 $otherNameContent.ToArray()
 
     # Outer SEQUENCE wrapping the OtherName
     $outerSeq = [System.Collections.Generic.List[byte]]::new()

@@ -1,7 +1,7 @@
-# Import all functions
+# Import all functions (recurse to include vendored Private\PSPkinit)
 Set-Location -Path ~\Documents\ESCalator
-Get-ChildItem ".\Private\*.ps1" | ForEach-Object { . $_ }
-Get-ChildItem ".\Public\*.ps1" | ForEach-Object { . $_ }
+Get-ChildItem ".\Private\*.ps1" -Recurse | ForEach-Object { . $_.FullName }
+Get-ChildItem ".\Public\*.ps1" | ForEach-Object { . $_.FullName }
 
 # Get AD CS objects
 $AdcsObjects = Get-AdcsObjects

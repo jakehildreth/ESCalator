@@ -94,6 +94,8 @@ function Request-ESC1Certificate {
         PrivateKeyPem      = $null
         RsaKey             = $null
         KeyContainerName   = $null
+        Certificate        = $null   # X509Certificate2 (with private key) for PKINIT
+        San                = $TargetUPN  # the UPN placed in the SAN, for ClientName
         SanPresent         = $false
         RequestId          = $null
         DispositionMessage = $null
@@ -223,6 +225,15 @@ function Request-ESC1Certificate {
         Write-Verbose "Certificate added to machine store with key container '$containerName'"
 
         $result.Success = $true
+        # Re-read the persisted cert from the machine store. The store copy resolves its
+        # private key via CNG (RSACng), which NetFX SignedCms encodes correctly for PKINIT;
+        # the in-memory object carries a CAPI RSACryptoServiceProvider that mis-encodes the
+        # CMS eContent on NetFX 4.8 (KRB-ERROR 60). Callers should use .Certificate directly.
+        $readStore = [System.Security.Cryptography.X509Certificates.X509Store]::new('My', 'LocalMachine')
+        $readStore.Open('ReadOnly')
+        $persisted = $readStore.Certificates | Where-Object { $_.Thumbprint -eq $issuedCertWithKey.Thumbprint }
+        $readStore.Close()
+        $result.Certificate = if ($persisted) { $persisted } else { $issuedCertWithKey }
         # Pass the live RSA key for in-process PKINIT use. Caller is responsible for disposal.
         $result.RsaKey = $rsa
         Write-Verbose "Certificate issued. SAN present: $($result.SanPresent)"

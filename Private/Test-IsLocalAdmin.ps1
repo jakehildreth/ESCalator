@@ -33,7 +33,6 @@ function Test-IsLocalAdmin {
     param (
     )
 
-    #requires -Version 7.4
 
     begin {
         Write-Verbose "Testing if current user is a local administrator"

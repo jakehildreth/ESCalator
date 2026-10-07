@@ -136,7 +136,6 @@ function Find-ESC4Issue {
         [string]$MSPKIRASignatureGUID = 'd15ef7d8-f226-46db-ae79-b34e560bd12c'
     )
 
-    #requires -Version 7.4 -Modules Microsoft.PowerShell.Security
 
     begin {
         # Load the ESCalatorIssue class

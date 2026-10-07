@@ -1,4 +1,4 @@
-function Get-GradientColors {
+﻿function Get-GradientColors {
     <#
         .SYNOPSIS
         Generates a gradient of true color ANSI escape sequences between two colors or from a predefined theme.
@@ -143,7 +143,9 @@ function Get-GradientColors {
         [switch]$Legacy256Color
     )
 
-    #requires -Version 7.4
+    # PowerShell 5.1 has no `e escape; use the ESC character directly for ANSI sequences.
+    $esc = [char]0x1b
+
 
     # Predefined color themes
     $colorThemes = @{
@@ -354,7 +356,7 @@ function Get-GradientColors {
     # Display preview if requested
     if ($Preview) {
         Write-Host ""
-        Write-Host "`e[1mGradient Preview`e[0m" -ForegroundColor White
+        Write-Host "${esc}[1mGradient Preview${esc}[0m" -ForegroundColor White
         
         # Find the longest color name for consistent padding
         $maxColorNameLength = ($gradientInfo | ForEach-Object { $_.ColorName.Length } | Measure-Object -Maximum).Maximum
@@ -368,14 +370,14 @@ function Get-GradientColors {
             
             if ($Legacy256Color) {
                 $color = $info.ANSI
-                $invertedText = "`e[48;5;${color};30m $colorName `e[0m"  # Black text on color background
-                $ansiCode = "`e[38;5;${color}m$block`e[0m"  # Colored block
+                $invertedText = "${esc}[48;5;${color};30m $colorName ${esc}[0m"  # Black text on color background
+                $ansiCode = "${esc}[38;5;${color}m$block${esc}[0m"  # Colored block
                 Write-Host "$ansiCode $invertedText ANSI: $color"
             } else {
                 $rgb = $info.RGB
                 $trueColorCode = $info.TrueColor
-                $invertedText = "`e[48;2;$($rgb.R);$($rgb.G);$($rgb.B);30m $colorName `e[0m"  # Black text on RGB background
-                $rgbCode = "`e[${trueColorCode}m$block`e[0m"  # True color block
+                $invertedText = "${esc}[48;2;$($rgb.R);$($rgb.G);$($rgb.B);30m $colorName ${esc}[0m"  # Black text on RGB background
+                $rgbCode = "${esc}[${trueColorCode}m$block${esc}[0m"  # True color block
                 $hexColor = "#{0:X2}{1:X2}{2:X2}" -f [int]$rgb.R, [int]$rgb.G, [int]$rgb.B
                 Write-Host "$rgbCode $invertedText RGB: $($rgb.R),$($rgb.G),$($rgb.B) ($hexColor)"
             }

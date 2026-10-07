@@ -1,4 +1,4 @@
-function Show-ESC4e1AttackDetails {
+﻿function Show-ESC4e1AttackDetails {
     <#
         .SYNOPSIS
         Shows an interactive menu for selecting and attacking ESC4e1 vulnerable templates.
@@ -11,6 +11,9 @@ function Show-ESC4e1AttackDetails {
         [Parameter()]
         [object]$Principal
     )
+
+    # PowerShell 5.1 has no `e escape; use the ESC character directly for ANSI sequences.
+    $esc = [char]0x1b
 
     Write-Host "=== ESC4e1: Immediate Template Modification Attack ===" -ForegroundColor Red
     Write-Host ""
@@ -69,7 +72,7 @@ function Show-ESC4e1AttackDetails {
         Write-Host ""
 
         # Get user choice
-        Write-Host "`e[1mSelect a template to analyze`e[0m" -NoNewline
+        Write-Host "${esc}[1mSelect a template to analyze${esc}[0m" -NoNewline
         Write-Host " (1-$($uniqueTemplates.Count), q=quit): " -NoNewline
         $choice = Read-Host
 
@@ -90,11 +93,11 @@ function Show-ESC4e1AttackDetails {
                 Write-Host ""
                 Read-Host "Press Enter to continue"
             } else {
-                Write-Host "`e[38;5;196m[x] Invalid choice. Please enter a number between 1 and $($uniqueTemplates.Count) or 'q' to quit.`e[0m" -ForegroundColor Red
+                Write-Host "${esc}[38;5;196m[x] Invalid choice. Please enter a number between 1 and $($uniqueTemplates.Count) or 'q' to quit.${esc}[0m" -ForegroundColor Red
                 Write-Host ""
             }
         } else {
-            Write-Host "`e[38;5;196m[x] Invalid input. Please enter a number (1-$($uniqueTemplates.Count)) or 'q' to quit.`e[0m" -ForegroundColor Red
+            Write-Host "${esc}[38;5;196m[x] Invalid input. Please enter a number (1-$($uniqueTemplates.Count)) or 'q' to quit.${esc}[0m" -ForegroundColor Red
             Write-Host ""
         }
 

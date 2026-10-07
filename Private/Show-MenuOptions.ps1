@@ -34,7 +34,6 @@ function Show-MenuOptions {
         [switch]$AllowBack
     )
 
-    #requires -Version 7.4
 
     # Display the menu
     Write-Host ""

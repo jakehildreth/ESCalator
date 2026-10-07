@@ -1,3 +1,7 @@
-# Ignore Output folder and all its contents
+# Don't check in build output directories
 Output/
-./Output/
+Artefacts/
+
+scratch/
+
+testResults.xml

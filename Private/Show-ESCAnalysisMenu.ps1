@@ -1,4 +1,4 @@
-function Show-ESCAnalysisMenu {
+﻿function Show-ESCAnalysisMenu {
     <#
         .SYNOPSIS
         Displays ESC vulnerability analysis results in a simple menu format.
@@ -45,7 +45,9 @@ function Show-ESCAnalysisMenu {
         [System.DirectoryServices.DirectoryEntry]$Principal
     )
 
-    #requires -Version 7.4
+    # PowerShell 5.1 has no `e escape; use the ESC character directly for ANSI sequences.
+    $esc = [char]0x1b
+
 
     Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Starting $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."
 
@@ -155,7 +157,7 @@ function Show-ESCAnalysisMenu {
         Write-Host ""
 
         # Get user choice
-        Write-Host "`e[1mSelect an attack to explore`e[0m" -NoNewline
+        Write-Host "${esc}[1mSelect an attack to explore${esc}[0m" -NoNewline
         Write-Host " (1-$($attackDescriptions.Count), q=quit): " -NoNewline
         $choice = Read-Host
 
@@ -204,11 +206,11 @@ function Show-ESCAnalysisMenu {
                 Write-Host ""
                 Read-Host "Press Enter to continue"
             } else {
-                Write-Host "`e[38;5;196m[x] Invalid choice. Please enter a number between 1 and $($attackDescriptions.Count) or 'q' to quit.`e[0m" -ForegroundColor Red
+                Write-Host "${esc}[38;5;196m[x] Invalid choice. Please enter a number between 1 and $($attackDescriptions.Count) or 'q' to quit.${esc}[0m" -ForegroundColor Red
                 Write-Host ""
             }
         } else {
-            Write-Host "`e[38;5;196m[x] Invalid input. Please enter a number (1-$($attackDescriptions.Count)) or 'q' to quit.`e[0m" -ForegroundColor Red
+            Write-Host "${esc}[38;5;196m[x] Invalid input. Please enter a number (1-$($attackDescriptions.Count)) or 'q' to quit.${esc}[0m" -ForegroundColor Red
             Write-Host ""
         }
 

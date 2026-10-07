@@ -70,7 +70,6 @@ function Resolve-Principal {
         [string]$Server
     )
 
-    #requires -Version 7.4
 
     begin {
         Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Starting $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."

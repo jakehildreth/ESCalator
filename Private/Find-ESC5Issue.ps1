@@ -138,7 +138,6 @@ function Find-ESC5Issue {
         [string]$CertificateTemplatesAttributeGUID = '2a39c5b1-8960-11d1-aebc-0000f80367c1'
     )
 
-    #requires -Version 7.4 -Modules Microsoft.PowerShell.Security
 
     begin {
         # Load the ESCalatorIssue class

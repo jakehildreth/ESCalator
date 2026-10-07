@@ -30,11 +30,10 @@ function Start-ESCalator {
         [switch]$ReportOnly
     )
 
-    #requires -Version 7.4
 
     # Select random theme colors once at the start of the session
     $sessionColors = Get-GradientColors -Theme "Random" -Steps 5
-    Write-Verbose "Session theme colors selected: $($sessionColors | ForEach-Object { "RGB($($_.R),$($_.G),$($_.B))" } | Join-String -Separator ', ')"
+    Write-Verbose "Session theme colors selected: $(($sessionColors | ForEach-Object { "RGB($($_.R),$($_.G),$($_.B))" }) -join ', ')"
 
     # Show the ESCalator header with consistent session colors
     Show-ESCalatorHeader -Color1 $sessionColors[0] -Color2 $sessionColors[1] -Color3 $sessionColors[2] -Color4 $sessionColors[3] -Color5 $sessionColors[4]

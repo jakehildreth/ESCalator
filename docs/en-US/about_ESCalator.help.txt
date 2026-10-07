@@ -1,0 +1,22 @@
+TOPIC
+    ESCalator
+
+SHORT DESCRIPTION
+    A tiny tool for identifying and abusing AD CS issue combinations that may not
+    be readily obvious.
+
+LONG DESCRIPTION
+    ESCalator collects Active Directory Certificate Services (AD CS) objects,
+    identifies ESC-class misconfigurations (ESC4, ESC5, and related chains),
+    expands group-based issues to individual principals, and presents an
+    interactive menu for exploring and executing attacks.
+
+    The primary entry point is Start-ESCalator, which gathers AD CS objects,
+    scans for vulnerable access control configurations, and launches an
+    interactive analysis menu. Use the -ReportOnly switch to run the analysis
+    and print results without entering the interactive menu.
+
+EXAMPLES
+    Start-ESCalator
+
+    Start-ESCalator -ReportOnly

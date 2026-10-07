@@ -1,4 +1,4 @@
-function Get-MenuChoice {
+﻿function Get-MenuChoice {
     <#
         .SYNOPSIS
         Gets validated user input for menu selection.
@@ -35,13 +35,15 @@ function Get-MenuChoice {
         [switch]$AllowBack
     )
 
-    #requires -Version 7.4
+    # PowerShell 5.1 has no `e escape; use the ESC character directly for ANSI sequences.
+    $esc = [char]0x1b
+
 
     $validInput = $false
     $choice = $null  # Can now be integer, 'q', or 'b'
 
     do {
-        Write-Host "`e[1m$Prompt`e[0m" -NoNewline
+        Write-Host "${esc}[1m$Prompt${esc}[0m" -NoNewline
         $optionText = " (1-$MaxOption"
         if ($AllowBack) {
             $optionText += ", b=back"
@@ -72,11 +74,11 @@ function Get-MenuChoice {
                     $validInput = $true
                 } else {
                     $validInput = $false
-                    Write-Host "`e[38;5;196m[x] Invalid choice. Please enter a number between 1 and $MaxOption" -NoNewline
+                    Write-Host "${esc}[38;5;196m[x] Invalid choice. Please enter a number between 1 and $MaxOption" -NoNewline
                     if ($AllowBack) {
-                        Write-Host ", 'b' for back, or 'q' to quit.`e[0m"
+                        Write-Host ", 'b' for back, or 'q' to quit.${esc}[0m"
                     } else {
-                        Write-Host " or 'q' to quit.`e[0m"
+                        Write-Host " or 'q' to quit.${esc}[0m"
                     }
                     Write-Host ""
                 }
@@ -87,7 +89,7 @@ function Get-MenuChoice {
                     $validOptions += ", 'b' for back"
                 }
                 $validOptions += ", or 'q' to quit"
-                Write-Host "`e[38;5;196m[x] Invalid input. Please enter $validOptions.`e[0m"
+                Write-Host "${esc}[38;5;196m[x] Invalid input. Please enter $validOptions.${esc}[0m"
                 Write-Host ""
             }
         }

@@ -53,7 +53,6 @@ function Expand-Issue {
         [bool]$Recursive = $true
     )
 
-    #requires -Version 7.4
 
     begin {
         Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Starting $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."

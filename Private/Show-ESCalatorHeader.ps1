@@ -1,4 +1,4 @@
-function Show-ESCalatorHeader {
+﻿function Show-ESCalatorHeader {
     <#
         .SYNOPSIS
         Displays the ESCalator logo and information header with 24-bit true color gradients.
@@ -51,18 +51,20 @@ function Show-ESCalatorHeader {
         [hashtable]$Color5
     )
 
-    #requires -Version 7.4
+    # PowerShell 5.1 has no `e escape; use the ESC character directly for ANSI sequences.
+    $esc = [char]0x1b
+
 
     Write-Host ""
-    Write-Host "`e[38;2;$($Color1.R);$($Color1.G);$($Color1.B)m█        ███      ████      ████      ███  █████████      ███        ███      ███       ██`e[0m"
-    Write-Host "`e[38;2;$($Color2.R);$($Color2.G);$($Color2.B)m█  ████████  ████████  ████  ██  ████  ██  ████████  ████  █████  █████  ████  ██  ████  █`e[0m"
-    Write-Host "`e[38;2;$($Color3.R);$($Color3.G);$($Color3.B)m█      █████      ███  ████████  ████  ██  ████████  ████  █████  █████  ████  ██       ██`e[0m"
-    Write-Host "`e[38;2;$($Color4.R);$($Color4.G);$($Color4.B)m█  ██████████████  ██  ████  ██        ██  ████████        █████  █████  ████  ██  ███  ██`e[0m"
-    Write-Host "`e[38;2;$($Color5.R);$($Color5.G);$($Color5.B)m█        ███      ████      ███  ████  ██        ██  ████  █████  ██████      ███  ████  █`e[0m"
-    Write-Host "`e[38;2;$($Color5.R);$($Color5.G);$($Color5.B)m                 ╔══════════════════════════════════════════════════╗`e[0m"
-    Write-Host "`e[38;2;$($Color4.R);$($Color4.G);$($Color4.B)m                 ║`e[0m AD CS Issue Combo Identification and Attack Tool `e[38;2;$($Color4.R);$($Color4.G);$($Color4.B)m║`e[0m"
-    Write-Host "`e[38;2;$($Color3.R);$($Color3.G);$($Color3.B)m                 ║`e[0m               (c) 2025 Jake Hildreth             `e[38;2;$($Color3.R);$($Color3.G);$($Color3.B)m║`e[0m"
-    Write-Host "`e[38;2;$($Color2.R);$($Color2.G);$($Color2.B)m                 ║`e[0m           `e[1mFOR EDUCATIONAL PURPOSES ONLY`e[0m          `e[38;2;$($Color2.R);$($Color2.G);$($Color2.B)m║`e[0m"
-    Write-Host "`e[38;2;$($Color1.R);$($Color1.G);$($Color1.B)m                 ╚══════════════════════════════════════════════════╝`e[0m"
+    Write-Host "${esc}[38;2;$($Color1.R);$($Color1.G);$($Color1.B)m█        ███      ████      ████      ███  █████████      ███        ███      ███       ██${esc}[0m"
+    Write-Host "${esc}[38;2;$($Color2.R);$($Color2.G);$($Color2.B)m█  ████████  ████████  ████  ██  ████  ██  ████████  ████  █████  █████  ████  ██  ████  █${esc}[0m"
+    Write-Host "${esc}[38;2;$($Color3.R);$($Color3.G);$($Color3.B)m█      █████      ███  ████████  ████  ██  ████████  ████  █████  █████  ████  ██       ██${esc}[0m"
+    Write-Host "${esc}[38;2;$($Color4.R);$($Color4.G);$($Color4.B)m█  ██████████████  ██  ████  ██        ██  ████████        █████  █████  ████  ██  ███  ██${esc}[0m"
+    Write-Host "${esc}[38;2;$($Color5.R);$($Color5.G);$($Color5.B)m█        ███      ████      ███  ████  ██        ██  ████  █████  ██████      ███  ████  █${esc}[0m"
+    Write-Host "${esc}[38;2;$($Color5.R);$($Color5.G);$($Color5.B)m                 ╔══════════════════════════════════════════════════╗${esc}[0m"
+    Write-Host "${esc}[38;2;$($Color4.R);$($Color4.G);$($Color4.B)m                 ║${esc}[0m AD CS Issue Combo Identification and Attack Tool ${esc}[38;2;$($Color4.R);$($Color4.G);$($Color4.B)m║${esc}[0m"
+    Write-Host "${esc}[38;2;$($Color3.R);$($Color3.G);$($Color3.B)m                 ║${esc}[0m               (c) 2025 Jake Hildreth             ${esc}[38;2;$($Color3.R);$($Color3.G);$($Color3.B)m║${esc}[0m"
+    Write-Host "${esc}[38;2;$($Color2.R);$($Color2.G);$($Color2.B)m                 ║${esc}[0m           ${esc}[1mFOR EDUCATIONAL PURPOSES ONLY${esc}[0m          ${esc}[38;2;$($Color2.R);$($Color2.G);$($Color2.B)m║${esc}[0m"
+    Write-Host "${esc}[38;2;$($Color1.R);$($Color1.G);$($Color1.B)m                 ╚══════════════════════════════════════════════════╝${esc}[0m"
     Write-Host ""
 }

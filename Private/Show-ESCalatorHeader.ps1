@@ -37,16 +37,16 @@
     param (
         [Parameter(Mandatory)]
         [hashtable]$Color1,
-        
+
         [Parameter(Mandatory)]
         [hashtable]$Color2,
-        
+
         [Parameter(Mandatory)]
         [hashtable]$Color3,
-        
+
         [Parameter(Mandatory)]
         [hashtable]$Color4,
-        
+
         [Parameter(Mandatory)]
         [hashtable]$Color5
     )
@@ -61,10 +61,10 @@
     Write-Host "${esc}[38;2;$($Color3.R);$($Color3.G);$($Color3.B)m█      █████      ███  ████████  ████  ██  ████████  ████  █████  █████  ████  ██       ██${esc}[0m"
     Write-Host "${esc}[38;2;$($Color4.R);$($Color4.G);$($Color4.B)m█  ██████████████  ██  ████  ██        ██  ████████        █████  █████  ████  ██  ███  ██${esc}[0m"
     Write-Host "${esc}[38;2;$($Color5.R);$($Color5.G);$($Color5.B)m█        ███      ████      ███  ████  ██        ██  ████  █████  ██████      ███  ████  █${esc}[0m"
-    Write-Host "${esc}[38;2;$($Color5.R);$($Color5.G);$($Color5.B)m                 ╔══════════════════════════════════════════════════╗${esc}[0m"
-    Write-Host "${esc}[38;2;$($Color4.R);$($Color4.G);$($Color4.B)m                 ║${esc}[0m AD CS Issue Combo Identification and Attack Tool ${esc}[38;2;$($Color4.R);$($Color4.G);$($Color4.B)m║${esc}[0m"
-    Write-Host "${esc}[38;2;$($Color3.R);$($Color3.G);$($Color3.B)m                 ║${esc}[0m               (c) 2025 Jake Hildreth             ${esc}[38;2;$($Color3.R);$($Color3.G);$($Color3.B)m║${esc}[0m"
-    Write-Host "${esc}[38;2;$($Color2.R);$($Color2.G);$($Color2.B)m                 ║${esc}[0m           ${esc}[1mFOR EDUCATIONAL PURPOSES ONLY${esc}[0m          ${esc}[38;2;$($Color2.R);$($Color2.G);$($Color2.B)m║${esc}[0m"
-    Write-Host "${esc}[38;2;$($Color1.R);$($Color1.G);$($Color1.B)m                 ╚══════════════════════════════════════════════════╝${esc}[0m"
+    Write-Host "${esc}[38;2;$($Color5.R);$($Color5.G);$($Color5.B)m                 ╔═════════════════════════════════════════════════╗${esc}[0m"
+    Write-Host "${esc}[38;2;$($Color4.R);$($Color4.G);$($Color4.B)m                 ║${esc}[0m      AD CS Vulnerability Demonstration Tool     ${esc}[38;2;$($Color4.R);$($Color4.G);$($Color4.B)m║${esc}[0m"
+    Write-Host "${esc}[38;2;$($Color3.R);$($Color3.G);$($Color3.B)m                 ║${esc}[0m           (c) 2025-2026 Jake Hildreth           ${esc}[38;2;$($Color3.R);$($Color3.G);$($Color3.B)m║${esc}[0m"
+    Write-Host "${esc}[38;2;$($Color2.R);$($Color2.G);$($Color2.B)m                 ║${esc}[0m          ${esc}[1mFOR EDUCATIONAL PURPOSES ONLY${esc}[0m          ${esc}[38;2;$($Color2.R);$($Color2.G);$($Color2.B)m║${esc}[0m"
+    Write-Host "${esc}[38;2;$($Color1.R);$($Color1.G);$($Color1.B)m                 ╚═════════════════════════════════════════════════╝${esc}[0m"
     Write-Host ""
 }

@@ -1,6 +1,6 @@
 # ESCalator
 
-A tiny tool for identifying and abusing AD CS issue combinations that may not be readily obvious.
+A tiny tool for identifying and demonstrating AD CS vulnerabilities.
 
 ## Installation
 
@@ -21,17 +21,6 @@ Run the interactive analysis menu:
 ```powershell
 Start-ESCalator
 ```
-
-Run the analysis once and print results without entering the interactive menu:
-
-```powershell
-Start-ESCalator -ReportOnly
-```
-
-## Examples
-
-- `Start-ESCalator` - gather AD CS objects, scan for ESC4/ESC5 issues, and open the interactive menu.
-- `Start-ESCalator -ReportOnly` - run the same analysis and exit after reporting.
 
 ## License
 

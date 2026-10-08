@@ -83,7 +83,7 @@ function Invoke-InteractiveAttack {
             switch ($AttackType) {
                 "ESC4e1" {
                     Write-Host "- Template Modified: $($result.TemplateName)" -ForegroundColor White
-                    Write-Host "- Certificate Requested: $($result.CertificateRequested)" -ForegroundColor White
+                    Write-Host "- Certificate Requested: $($result.AttackResult.Certificate)" -ForegroundColor White
                 }
                 "ESC4p5" {
                     Write-Host "- Template Modified: $($result.TemplateName)" -ForegroundColor White
@@ -101,6 +101,15 @@ function Invoke-InteractiveAttack {
             # Common result information
             if ($result.KirbiFile) {
                 Write-Host "- Ticket Generated: $($result.KirbiFile)" -ForegroundColor White
+            }
+
+            # PKINIT/TGT details from the nested ESC1 attack (ESC4e1/ESC4p5) or a direct result
+            $tgt = if ($result.AttackResult) { $result.AttackResult } else { $result }
+            if ($tgt.PkinitVerified) {
+                Write-Host "- PKINIT Verified: $($tgt.PkinitVerified)" -ForegroundColor White
+                Write-Host "- Principal: $($tgt.Principal)" -ForegroundColor White
+                Write-Host "- Realm: $($tgt.Realm)" -ForegroundColor White
+                Write-Host "- TGT Valid Until: $($tgt.TgtEndTime) (TGT discarded, not injected)" -ForegroundColor White
             }
         } else {
             if ($result.Error) {

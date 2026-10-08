@@ -69,20 +69,25 @@ function Start-ESCalator {
     }
     
     # Get all issues with AD CS objects
-    Write-Host "[i] Scanning for ESC4 and ESC5 vulnerabilities..." -ForegroundColor Yellow
+    Write-Host "[i] Scanning for ESC1, ESC4 and ESC5 vulnerabilities..." -ForegroundColor Yellow
     try {
         $OriginalIssues = @()
-        
+
+        Write-Host "   • Analyzing ESC1 (SAN Spoofing)..." -ForegroundColor Gray
+        $ESC1Issues = Find-ESC1Issue -AdcsObjects $AdcsObjects
+        $OriginalIssues += $ESC1Issues
+        Write-Host "    [+] Found $($ESC1Issues.Count) ESC1 issues" -ForegroundColor Green
+
         Write-Host "   • Analyzing ESC4 (Vulnerable Certificate Template Access Control)..." -ForegroundColor Gray
         $ESC4Issues = Find-ESC4Issue -AdcsObjects $AdcsObjects
         $OriginalIssues += $ESC4Issues
         Write-Host "    [+] Found $($ESC4Issues.Count) ESC4 issues" -ForegroundColor Green
-        
+
         Write-Host "   • Analyzing ESC5 (Vulnerable PKI Object Access Control)..." -ForegroundColor Gray
         $ESC5Issues = Find-ESC5Issue -AdcsObjects $AdcsObjects
         $OriginalIssues += $ESC5Issues
         Write-Host "    [+] Found $($ESC5Issues.Count) ESC5 issues" -ForegroundColor Green
-        
+
         Write-Host "  [i] Total issues found: $($OriginalIssues.Count)" -ForegroundColor Green
     } catch {
         Write-Host "  [x] Failed to scan for vulnerabilities: $($_.Exception.Message)" -ForegroundColor Red

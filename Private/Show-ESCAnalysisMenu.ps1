@@ -52,11 +52,21 @@
     Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Starting $($MyInvocation.MyCommand) on $env:COMPUTERNAME..."
 
     # Initialize result collections
+    $esc1Results = @()
     $esc4e1Results = @()
     $esc4p5ComboResults = @()
     $esc5p5ComboResults = @()
 
     try {
+        # Run Find-ESC1
+        Write-Verbose "Running Find-ESC1..."
+        if ($Principal) {
+            $esc1Results = @(Find-ESC1 -Issues $Issues -Principal $Principal)
+        } else {
+            $esc1Results = @(Find-ESC1 -Issues $Issues)
+        }
+        Write-Verbose "Find-ESC1 found $($esc1Results.Count) results"
+
         # Run Find-ESC4e1
         Write-Verbose "Running Find-ESC4e1..."
         if ($Principal) {
@@ -90,7 +100,7 @@
     }
 
     # Calculate totals
-    $totalVulnerabilities = $esc4e1Results.Count + $esc4p5ComboResults.Count + $esc5p5ComboResults.Count
+    $totalVulnerabilities = $esc1Results.Count + $esc4e1Results.Count + $esc4p5ComboResults.Count + $esc5p5ComboResults.Count
 
     # Display analysis header
     Write-Host ""
@@ -119,6 +129,7 @@
         Write-Host "[+] No ESC vulnerabilities found for this principal!" -ForegroundColor Green
         Write-Host ""
         Write-Host "The analyzed principal does not have any of the following vulnerability combinations:" -ForegroundColor Gray
+        Write-Host "  - ESC1: SAN Spoofing (enabled templates with enrollee-supplied subject)" -ForegroundColor Gray
         Write-Host "  - ESC4e1: ESC4 (enabled templates)" -ForegroundColor Gray
         Write-Host "  - ESC4p5: ESC4 (disabled templates) + ESC5 (pKIEnrollmentService certificateTemplates attribute) combinations" -ForegroundColor Gray
         Write-Host "  - ESC5p5: ESC5 (Certificate Templates container) + ESC5 (pKIEnrollmentService certificateTemplates attribute) combinations" -ForegroundColor Gray
@@ -127,38 +138,54 @@
         return
     }
 
-    # Build attack description menu
-    $attackDescriptions = @()
+    # Build attack menu dynamically: each entry has a label and an action key
+    $attackMenu = @()
+
+    if ($esc1Results.Count -gt 0) {
+        $attackMenu += [PSCustomObject]@{
+            Key = 'ESC1'
+            Label = "ESC1: SAN spoofing attack`n  - Can request certificates with arbitrary Subject Alternative Names from enabled templates"
+        }
+    }
 
     if ($esc4e1Results.Count -gt 0) {
-        $attackDescriptions += "ESC4e1: Immediate template modification attack`n  - Can modify one or more enabled certificate templates for instant privilege escalation"
+        $attackMenu += [PSCustomObject]@{
+            Key = 'ESC4e1'
+            Label = "ESC4e1: Immediate template modification attack`n  - Can modify one or more enabled certificate templates for instant privilege escalation"
+        }
     }
 
     if ($esc4p5ComboResults.Count -gt 0) {
-        $attackDescriptions += "ESC4p5: Combined template control attack`n  - Can modify one or more disabled certificate templates AND enable disabled templates"
+        $attackMenu += [PSCustomObject]@{
+            Key = 'ESC4p5'
+            Label = "ESC4p5: Combined template control attack`n  - Can modify one or more disabled certificate templates AND enable disabled templates"
+        }
     }
 
     if ($esc5p5ComboResults.Count -gt 0) {
-        $attackDescriptions += "ESC5p5: Full PKI infrastructure control`n  - Can create new certificate templates AND enabled disabled templates"
+        $attackMenu += [PSCustomObject]@{
+            Key = 'ESC5p5'
+            Label = "ESC5p5: Full PKI infrastructure control`n  - Can create new certificate templates AND enabled disabled templates"
+        }
     }
 
     do {
         # Display attack descriptions
         Write-Host "Available Attacks:" -ForegroundColor Yellow
         Write-Host ""
-        
-        for ($i = 0; $i -lt $attackDescriptions.Count; $i++) {
+
+        for ($i = 0; $i -lt $attackMenu.Count; $i++) {
             $optionNumber = $i + 1
-            Write-Host "$optionNumber. $($attackDescriptions[$i])" -ForegroundColor White
+            Write-Host "$optionNumber. $($attackMenu[$i].Label)" -ForegroundColor White
         }
-        
+
         Write-Host ""
         Write-Host "q. Quit" -ForegroundColor Red
         Write-Host ""
 
         # Get user choice
         Write-Host "${esc}[1mSelect an attack to explore${esc}[0m" -NoNewline
-        Write-Host " (1-$($attackDescriptions.Count), q=quit): " -NoNewline
+        Write-Host " (1-$($attackMenu.Count), q=quit): " -NoNewline
         $choice = Read-Host
 
         $choice = $choice.Trim().ToLower()
@@ -172,45 +199,34 @@
         # Try to parse as integer
         $numericChoice = 0
         if ([int]::TryParse($choice, [ref]$numericChoice)) {
-            if ($numericChoice -ge 1 -and $numericChoice -le $attackDescriptions.Count) {
+            if ($numericChoice -ge 1 -and $numericChoice -le $attackMenu.Count) {
                 Write-Host ""
-                # Show detailed information based on selection
-                switch ($numericChoice) {
-                    1 {
-                        if ($esc4e1Results.Count -gt 0) {
-                            Show-ESC4e1AttackDetails -Results $esc4e1Results -Principal $Principal
-                        } elseif ($esc4p5ComboResults.Count -gt 0) {
-                            Show-ESC4p5AttackDetails -Results $esc4p5ComboResults
-                            Invoke-InteractiveAttack -AttackType "ESC4p5" -AttackResult $esc4p5ComboResults[0] -Principal $Principal
-                        } elseif ($esc5p5ComboResults.Count -gt 0) {
-                            Show-ESC5p5AttackDetails -Results $esc5p5ComboResults
-                            Invoke-InteractiveAttack -AttackType "ESC5p5" -AttackResult $esc5p5ComboResults[0] -Principal $Principal
-                        }
+                $selectedAttack = $attackMenu[$numericChoice - 1].Key
+
+                switch ($selectedAttack) {
+                    'ESC1' {
+                        Show-ESC1AttackDetails -Results $esc1Results -Principal $Principal
                     }
-                    2 {
-                        if ($esc4p5ComboResults.Count -gt 0) {
-                            Show-ESC4p5AttackDetails -Results $esc4p5ComboResults
-                            Invoke-InteractiveAttack -AttackType "ESC4p5" -AttackResult $esc4p5ComboResults[0] -Principal $Principal
-                        } elseif ($esc5p5ComboResults.Count -gt 0) {
-                            Show-ESC5p5AttackDetails -Results $esc5p5ComboResults
-                            Invoke-InteractiveAttack -AttackType "ESC5p5" -AttackResult $esc5p5ComboResults[0] -Principal $Principal
-                        }
+                    'ESC4e1' {
+                        Show-ESC4e1AttackDetails -Results $esc4e1Results -Principal $Principal
                     }
-                    3 {
-                        if ($esc5p5ComboResults.Count -gt 0) {
-                            Show-ESC5p5AttackDetails -Results $esc5p5ComboResults
-                            Invoke-InteractiveAttack -AttackType "ESC5p5" -AttackResult $esc5p5ComboResults[0] -Principal $Principal
-                        }
+                    'ESC4p5' {
+                        Show-ESC4p5AttackDetails -Results $esc4p5ComboResults
+                        Invoke-InteractiveAttack -AttackType "ESC4p5" -AttackResult $esc4p5ComboResults[0] -Principal $Principal
+                    }
+                    'ESC5p5' {
+                        Show-ESC5p5AttackDetails -Results $esc5p5ComboResults
+                        Invoke-InteractiveAttack -AttackType "ESC5p5" -AttackResult $esc5p5ComboResults[0] -Principal $Principal
                     }
                 }
                 Write-Host ""
                 Read-Host "Press Enter to continue"
             } else {
-                Write-Host "${esc}[38;5;196m[x] Invalid choice. Please enter a number between 1 and $($attackDescriptions.Count) or 'q' to quit.${esc}[0m" -ForegroundColor Red
+                Write-Host "${esc}[38;5;196m[x] Invalid choice. Please enter a number between 1 and $($attackMenu.Count) or 'q' to quit.${esc}[0m" -ForegroundColor Red
                 Write-Host ""
             }
         } else {
-            Write-Host "${esc}[38;5;196m[x] Invalid input. Please enter a number (1-$($attackDescriptions.Count)) or 'q' to quit.${esc}[0m" -ForegroundColor Red
+            Write-Host "${esc}[38;5;196m[x] Invalid input. Please enter a number (1-$($attackMenu.Count)) or 'q' to quit.${esc}[0m" -ForegroundColor Red
             Write-Host ""
         }
 

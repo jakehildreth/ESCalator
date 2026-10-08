@@ -60,27 +60,27 @@
         # Run Find-ESC4e1
         Write-Verbose "Running Find-ESC4e1..."
         if ($Principal) {
-            $esc4e1Results = Find-ESC4e1 -Issues $Issues -Principal $Principal
+            $esc4e1Results = @(Find-ESC4e1 -Issues $Issues -Principal $Principal)
         } else {
-            $esc4e1Results = Find-ESC4e1 -Issues $Issues 
+            $esc4e1Results = @(Find-ESC4e1 -Issues $Issues)
         }
         Write-Verbose "Find-ESC4e1 found $($esc4e1Results.Count) results"
 
         # Run Find-ESC4p5Combo
         Write-Verbose "Running Find-ESC4p5Combo..."
         if ($Principal) {
-            $esc4p5ComboResults = Find-ESC4p5Combo -Issues $Issues -Principal $Principal
+            $esc4p5ComboResults = @(Find-ESC4p5Combo -Issues $Issues -Principal $Principal)
         } else {
-            $esc4p5ComboResults = Find-ESC4p5Combo -Issues $Issues
+            $esc4p5ComboResults = @(Find-ESC4p5Combo -Issues $Issues)
         }
         Write-Verbose "Find-ESC4p5Combo found $($esc4p5ComboResults.Count) results"
 
         # Run Find-ESC5p5Combo
         Write-Verbose "Running Find-ESC5p5Combo..."
         if ($Principal) {
-            $esc5p5ComboResults = Find-ESC5p5Combo -Issues $Issues -Principal $Principal
+            $esc5p5ComboResults = @(Find-ESC5p5Combo -Issues $Issues -Principal $Principal)
         } else {
-            $esc5p5ComboResults = Find-ESC5p5Combo -Issues $Issues
+            $esc5p5ComboResults = @(Find-ESC5p5Combo -Issues $Issues)
         }
         Write-Verbose "Find-ESC5p5Combo found $($esc5p5ComboResults.Count) results"
 

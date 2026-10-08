@@ -203,13 +203,20 @@ function Find-ESC4p5Combo {
             
             # Check if issue applies to target principal
             $appliesToPrincipal = $false
-            
+
+            # Well-known SIDs whose membership implicitly includes every authenticated principal
+            $implicitSids = @('S-1-5-11', 'S-1-1-0')
+            if ($issue.IdentityReferenceSID -in $implicitSids) {
+                $appliesToPrincipal = $true
+                Write-Verbose "ESC5 issue applies via implicit membership SID: $($issue.IdentityReferenceSID)"
+            }
+
             # Check by SID
-            if ($targetPrincipalSid -and $issue.IdentityReferenceSID -eq $targetPrincipalSid) {
+            if (-not $appliesToPrincipal -and $targetPrincipalSid -and $issue.IdentityReferenceSID -eq $targetPrincipalSid) {
                 $appliesToPrincipal = $true
                 Write-Verbose "ESC5 issue matches principal by SID: $targetPrincipalSid"
             }
-            
+
             # Check by name if SID match fails
             if (-not $appliesToPrincipal -and $targetPrincipalName -and $issue.Principal) {
                 $shortName = $targetPrincipalName -replace '^.*\\', ''
@@ -248,11 +255,24 @@ function Find-ESC4p5Combo {
                 $principalCombinations[$principalKey].ESC4dIssues += $esc4Issue
             }
             
+            # Well-known SIDs whose membership implicitly includes every authenticated principal.
+            # Authenticated Users (S-1-5-11) and Everyone (S-1-1-0) are pseudo-groups that
+            # Expand-Issue cannot enumerate, so their SID never matches an expanded user SID.
+            $implicitMembershipSids = @('S-1-5-11', 'S-1-1-0')
+
             # Add ESC5 enrollment issues to combinations
             foreach ($esc5Issue in $esc5EnrollmentIssues) {
-                $principalKey = $esc5Issue.IdentityReferenceSID -or $esc5Issue.Principal -or "Unknown"
-                if ($principalCombinations[$principalKey]) {
-                    $principalCombinations[$principalKey].ESC5EnrollmentIssues += $esc5Issue
+                $esc5Sid = $esc5Issue.IdentityReferenceSID
+                if ($esc5Sid -in $implicitMembershipSids) {
+                    # Implicit membership: apply to every principal that has an ESC4d issue
+                    foreach ($key in $principalCombinations.Keys) {
+                        $principalCombinations[$key].ESC5EnrollmentIssues += $esc5Issue
+                    }
+                } else {
+                    $principalKey = $esc5Sid -or $esc5Issue.Principal -or "Unknown"
+                    if ($principalCombinations[$principalKey]) {
+                        $principalCombinations[$principalKey].ESC5EnrollmentIssues += $esc5Issue
+                    }
                 }
             }
             

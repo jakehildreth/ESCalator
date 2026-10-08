@@ -74,46 +74,33 @@ function Invoke-InteractiveAttack {
             }
         }
         
-        if ($result -and $result.Success) {
+        # Attack functions return one object or an array (one per template/CA). Normalize.
+        $results = @($result)
+        $succeeded = @($results | Where-Object { $_ -and ($_.Success -or $_.AttackSuccess) })
+
+        if ($succeeded.Count -gt 0) {
             Write-Host "[+] $AttackType attack completed successfully!" -ForegroundColor Green
             Write-Host ""
             Write-Host "Attack Summary:" -ForegroundColor Cyan
-            
-            # Display attack-specific result information
-            switch ($AttackType) {
-                "ESC4e1" {
-                    Write-Host "- Template Modified: $($result.TemplateName)" -ForegroundColor White
-                    Write-Host "- Certificate Requested: $($result.AttackResult.Certificate)" -ForegroundColor White
-                }
-                "ESC4p5" {
-                    Write-Host "- Template Modified: $($result.TemplateName)" -ForegroundColor White
-                    Write-Host "- Template Enabled: $($result.TemplateEnabled)" -ForegroundColor White
-                    Write-Host "- Certificate Requested: $($result.CertificateRequested)" -ForegroundColor White
-                }
-                "ESC5p5" {
-                    Write-Host "- Template Created: $($result.TemplateName)" -ForegroundColor White
-                    Write-Host "- Template Configured: $($result.TemplateConfigured)" -ForegroundColor White
-                    Write-Host "- Template Enabled: $($result.TemplateEnabled)" -ForegroundColor White
-                    Write-Host "- Certificate Requested: $($result.CertificateRequested)" -ForegroundColor White
-                }
-            }
-            
-            # Common result information
-            if ($result.KirbiFile) {
-                Write-Host "- Ticket Generated: $($result.KirbiFile)" -ForegroundColor White
-            }
 
-            # PKINIT/TGT details from the nested ESC1 attack (ESC4e1/ESC4p5) or a direct result
-            $tgt = if ($result.AttackResult) { $result.AttackResult } else { $result }
-            if ($tgt.PkinitVerified) {
-                Write-Host "- PKINIT Verified: $($tgt.PkinitVerified)" -ForegroundColor White
-                Write-Host "- Principal: $($tgt.Principal)" -ForegroundColor White
-                Write-Host "- Realm: $($tgt.Realm)" -ForegroundColor White
-                Write-Host "- TGT Valid Until: $($tgt.TgtEndTime) (TGT discarded, not injected)" -ForegroundColor White
+            foreach ($r in $succeeded) {
+                # PKINIT/TGT details live on the nested ESC1 result for the ESC4 chains
+                $tgt = if ($r.AttackResult) { $r.AttackResult } else { $r }
+
+                if ($r.TemplateName) { Write-Host "- Template: $($r.TemplateName)" -ForegroundColor White }
+                if ($tgt.Certificate) { Write-Host "- Certificate: $($tgt.Certificate)" -ForegroundColor White }
+                if ($tgt.TargetPrincipal) { Write-Host "- Target Principal: $($tgt.TargetPrincipal)" -ForegroundColor White }
+                if ($tgt.PkinitVerified) {
+                    # Match the ESC1/EOBO display: TGT issued for <principal> (valid until <time>)
+                    Write-Host "- PKINIT Verified: TGT issued for $($tgt.Principal) (valid until $($tgt.TgtEndTime)). TGT discarded, not injected." -ForegroundColor White
+                }
+                Write-Host ""
             }
         } else {
-            if ($result.Error) {
-                Write-Host "Error: $($result.Error)" -ForegroundColor Red
+            Write-Host "[-] $AttackType attack did not succeed." -ForegroundColor Red
+            foreach ($r in $results) {
+                $err = if ($r.Error) { $r.Error } elseif ($r.ErrorMessage) { $r.ErrorMessage } else { $null }
+                if ($err) { Write-Host "Error: $err" -ForegroundColor Red }
             }
         }
     } catch {

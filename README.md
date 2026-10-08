@@ -22,11 +22,6 @@ Run the interactive analysis menu:
 Start-ESCalator
 ```
 
-## Examples
-
-- `Start-ESCalator` - gather AD CS objects, scan for ESC4/ESC5 issues, and open the interactive menu.
-- `Start-ESCalator -ReportOnly` - run the same analysis and exit after reporting.
-
 ## License
 
 MIT License w/Commons Clause - see [LICENSE](..\LICENSE) file for details.

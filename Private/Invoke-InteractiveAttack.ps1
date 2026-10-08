@@ -80,21 +80,26 @@ function Invoke-InteractiveAttack {
 
         if ($succeeded.Count -gt 0) {
             Write-Host "[+] $AttackType attack completed successfully!" -ForegroundColor Green
-            Write-Host ""
-            Write-Host "Attack Summary:" -ForegroundColor Cyan
 
             foreach ($r in $succeeded) {
-                # PKINIT/TGT details live on the nested ESC1 result for the ESC4 chains
+                # For the ESC4 chains the ESC1 result (with the TGT details) is nested
+                # under .AttackResult; a direct attack carries the fields itself.
                 $tgt = if ($r.AttackResult) { $r.AttackResult } else { $r }
 
-                if ($r.TemplateName) { Write-Host "- Template: $($r.TemplateName)" -ForegroundColor White }
-                if ($tgt.Certificate) { Write-Host "- Certificate: $($tgt.Certificate)" -ForegroundColor White }
-                if ($tgt.TargetPrincipal) { Write-Host "- Target Principal: $($tgt.TargetPrincipal)" -ForegroundColor White }
-                if ($tgt.PkinitVerified) {
-                    # Match the ESC1/EOBO display: TGT issued for <principal> (valid until <time>)
-                    Write-Host "- PKINIT Verified: TGT issued for $($tgt.Principal) (valid until $($tgt.TgtEndTime)). TGT discarded, not injected." -ForegroundColor White
+                # Duplicate the ESC1/EOBO result-object display.
+                [PSCustomObject]@{
+                    Success         = [bool]($r.AttackSuccess -or $r.Success)
+                    TemplateName    = $r.TemplateName
+                    TargetPrincipal = $tgt.TargetPrincipal
+                    TargetSID       = $tgt.TargetSID
+                    SanPresent      = $tgt.SanPresent
+                    Certificate     = $tgt.Certificate
+                    PkinitVerified  = $tgt.PkinitVerified
+                    Principal       = $tgt.Principal
+                    Realm           = $tgt.Realm
+                    TgtEndTime      = $tgt.TgtEndTime
+                    Error           = $tgt.Error
                 }
-                Write-Host ""
             }
         } else {
             Write-Host "[-] $AttackType attack did not succeed." -ForegroundColor Red

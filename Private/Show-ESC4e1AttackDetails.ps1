@@ -160,8 +160,18 @@ function Show-TemplateDetails {
     
     # Offer attack execution for current user
     if (-not $Principal) {
-        # Create a mock ESC4e1 result for this specific template
-        $templateResult = $Template.Issues[0].Result
+        # Build a result scoped to ONLY the selected template so the attack
+        # converts/enrolls just this one, not every vulnerable template.
+        $sourceResult = $Template.Issues[0].Result
+        $selectedIssues = @($Template.Issues | ForEach-Object { $_.Issue })
+        $templateResult = [PSCustomObject]@{
+            PSTypeName          = 'ESC4e1_Result'
+            PrincipalSID        = $sourceResult.PrincipalSID
+            PrincipalName       = $sourceResult.PrincipalName
+            ESC4e1Count         = $selectedIssues.Count
+            ESC4e1Issues        = $selectedIssues
+            VulnerableTemplates = @($Template.TemplateName)
+        }
         Invoke-InteractiveAttack -AttackType "ESC4e1" -AttackResult $templateResult -Principal $Principal
     }
 }

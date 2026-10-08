@@ -22,12 +22,6 @@ Run the interactive analysis menu:
 Start-ESCalator
 ```
 
-Run the analysis once and print results without entering the interactive menu:
-
-```powershell
-Start-ESCalator -ReportOnly
-```
-
 ## Examples
 
 - `Start-ESCalator` - gather AD CS objects, scan for ESC4/ESC5 issues, and open the interactive menu.

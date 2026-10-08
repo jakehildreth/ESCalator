@@ -44,13 +44,13 @@
     }
     
     # Group templates by name to remove duplicates
-    $uniqueTemplates = $allTemplates | Group-Object TemplateName | ForEach-Object {
+    $uniqueTemplates = @($allTemplates | Group-Object TemplateName | ForEach-Object {
         [PSCustomObject]@{
             TemplateName = $_.Name
             Issues = $_.Group
             IssueCount = $_.Count
         }
-    }
+    })
     
     if ($uniqueTemplates.Count -eq 0) {
         Write-Host "No vulnerable templates found." -ForegroundColor Red

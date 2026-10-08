@@ -243,7 +243,7 @@ function ConvertTo-ESC1 {
                     $newEKUs = $currentEKUs + $CLIENT_AUTH_EKU
                     $template.Properties['pKIExtendedKeyUsage'].Clear()
                     foreach ($eku in $newEKUs) {
-                        $template.Properties['pKIExtendedKeyUsage'].Add($eku)
+                        $null = $template.Properties['pKIExtendedKeyUsage'].Add($eku)
                     }
                     $changes += "Added Client Authentication EKU ($CLIENT_AUTH_EKU)"
                     

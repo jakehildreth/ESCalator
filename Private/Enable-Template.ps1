@@ -164,7 +164,7 @@ function Enable-Template {
                     # Add the template to the certificateTemplates attribute
                     if ($PSCmdlet.ShouldProcess("$caName", "Enable template '$templateName'")) {
                         # Add the new template to the list
-                        $ca.Properties['certificateTemplates'].Add($templateName)
+                        $null = $ca.Properties['certificateTemplates'].Add($templateName)
                         
                         # Commit the changes
                         $ca.CommitChanges()

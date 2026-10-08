@@ -157,8 +157,6 @@ function Invoke-ESC4e1Attack {
                         $attackResult = Invoke-ESC1Attack @esc1Params
                         
                         if ($attackResult) {
-                            Write-Host "  [+] ESC1 attack completed successfully" -ForegroundColor Green
-                            
                             # Create comprehensive result object
                             $resultObject = [PSCustomObject]@{
                                 PSTypeName = 'ESC4e1_Attack_Result'
@@ -175,7 +173,6 @@ function Invoke-ESC4e1Attack {
                             }
                             
                             $attackResults += $resultObject
-                            Write-Host "  [+] Attack result stored" -ForegroundColor Green
                         } else {
                             Write-Host "  [x] ESC1 attack failed or returned no result" -ForegroundColor Red
                             

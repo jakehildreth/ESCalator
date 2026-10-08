@@ -108,17 +108,23 @@ function Request-ESC1Certificate {
     }
 
     $rsa = $null
-    $containerName = 'ESCalator_' + [Guid]::NewGuid().ToString('N')
+    $cngKey = $null
+    $keyName = 'ESCalator_' + [Guid]::NewGuid().ToString('N')
     try {
-        # 1. Generate ephemeral key pair and CSR with UPN SAN.
-        #    CertificateRequest is available in NetFX 4.7.2+ (verified on 4.8.1, see issue #4).
-        #    RSACryptoServiceProvider with persisted container so the CA-issued cert
-        #    can reference the key for SignedCms.ComputeSignature (PKINIT).
-        $csp = [System.Security.Cryptography.CspParameters]::new()
-        $csp.KeyContainerName = $containerName
-        $csp.Flags = [System.Security.Cryptography.CspProviderFlags]::UseMachineKeyStore
-        $rsa = [System.Security.Cryptography.RSACryptoServiceProvider]::new($KeyLength, $csp)
-        $result.KeyContainerName = $containerName
+        # 1. Generate ephemeral CNG key pair in the CURRENT USER's key store and build the CSR.
+        #    RSACng (CNG) is used instead of RSACryptoServiceProvider (CAPI) because:
+        #      - NetFX 4.8.1 SignedCms.ComputeSignature mis-encodes CMS eContent with CAPI keys
+        #        (KRB-ERROR 60), whereas CNG keys encode correctly.
+        #      - CNG user keys live in %APPDATA%\Microsoft\Crypto\Keys and require no admin
+        #        rights, unlike CAPI machine keys (C:\ProgramData\...\MachineKeys).
+        $cngKey = [System.Security.Cryptography.CngKey]::Create(
+            [System.Security.Cryptography.CngAlgorithm]::Rsa,
+            $keyName,
+            [System.Security.Cryptography.CngKeyCreationParameters]::new()
+        )
+        $rsa = [System.Security.Cryptography.RSACng]::new($cngKey)
+        $rsa.KeySize = $KeyLength
+        $result.KeyContainerName = $keyName
         $request = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new(
             $SubjectName,
             $rsa,
@@ -212,38 +218,30 @@ function Request-ESC1Certificate {
             Write-Verbose 'Issued certificate contains no SAN extension'
         }
 
-        # 6. Attach the persisted key to the issued cert and add to machine store.
-        #    This is required for SignedCms.ComputeSignature (PKINIT) on NetFX 4.8.1.
-        $issuedCertWithKey = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
+        # 6. Attach the live CNG key to the issued cert in memory.
+        #    No cert-store round-trip is needed: CopyWithPrivateKey produces a cert whose
+        #    key is already RSACng, which NetFX SignedCms encodes correctly for PKINIT
+        #    (unlike CAPI RSACryptoServiceProvider keys).
+        $issuedCertNoKey = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
             [Convert]::FromBase64String($cleanBase64)
         )
-        $issuedCertWithKey.PrivateKey = $rsa
-        $store = [System.Security.Cryptography.X509Certificates.X509Store]::new('My', 'LocalMachine')
-        $store.Open('ReadWrite')
-        $store.Add($issuedCertWithKey)
-        $store.Close()
-        Write-Verbose "Certificate added to machine store with key container '$containerName'"
+        $issuedCertWithKey = [System.Security.Cryptography.X509Certificates.RSACertificateExtensions]::CopyWithPrivateKey($issuedCertNoKey, $rsa)
+        Write-Verbose "Issued certificate bound to in-memory CNG key '$keyName'"
 
         $result.Success = $true
-        # Re-read the persisted cert from the machine store. The store copy resolves its
-        # private key via CNG (RSACng), which NetFX SignedCms encodes correctly for PKINIT;
-        # the in-memory object carries a CAPI RSACryptoServiceProvider that mis-encodes the
-        # CMS eContent on NetFX 4.8 (KRB-ERROR 60). Callers should use .Certificate directly.
-        $readStore = [System.Security.Cryptography.X509Certificates.X509Store]::new('My', 'LocalMachine')
-        $readStore.Open('ReadOnly')
-        $persisted = $readStore.Certificates | Where-Object { $_.Thumbprint -eq $issuedCertWithKey.Thumbprint }
-        $readStore.Close()
-        $result.Certificate = if ($persisted) { $persisted } else { $issuedCertWithKey }
+        $result.Certificate = $issuedCertWithKey
         # Pass the live RSA key for in-process PKINIT use. Caller is responsible for disposal.
         $result.RsaKey = $rsa
         Write-Verbose "Certificate issued. SAN present: $($result.SanPresent)"
     } catch {
         $result.Error = "$($_.Exception.GetType().FullName): $($_.Exception.Message)"
         Write-Warning "Certificate request failed: $($result.Error)"
-        if ($rsa) { $rsa.Dispose(); $rsa = $null }
     } finally {
-        # Dispose the key only on failure; on success the caller owns it.
-        if (-not $result.Success -and $rsa) { $rsa.Dispose() }
+        if (-not $result.Success) {
+            # On failure, tear down the key and delete the ephemeral user key container.
+            if ($rsa) { $rsa.Dispose(); $rsa = $null }
+            if ($cngKey) { try { $cngKey.Delete() } catch { }; $cngKey = $null }
+        }
     }
 
     Write-Verbose "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')] Finishing $($MyInvocation.MyCommand)..."

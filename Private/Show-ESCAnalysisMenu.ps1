@@ -53,6 +53,7 @@
 
     # Initialize result collections
     $esc1Results = @()
+    $esc2Results = @()
     $esc4e1Results = @()
     $esc4p5ComboResults = @()
     $esc5p5ComboResults = @()
@@ -66,6 +67,15 @@
             $esc1Results = @(Find-ESC1 -Issues $Issues)
         }
         Write-Verbose "Find-ESC1 found $($esc1Results.Count) results"
+
+        # Run Find-ESC2
+        Write-Verbose "Running Find-ESC2..."
+        if ($Principal) {
+            $esc2Results = @(Find-ESC2 -Issues $Issues -Principal $Principal)
+        } else {
+            $esc2Results = @(Find-ESC2 -Issues $Issues)
+        }
+        Write-Verbose "Find-ESC2 found $($esc2Results.Count) results"
 
         # Run Find-ESC4e1
         Write-Verbose "Running Find-ESC4e1..."
@@ -100,7 +110,7 @@
     }
 
     # Calculate totals
-    $totalVulnerabilities = $esc1Results.Count + $esc4e1Results.Count + $esc4p5ComboResults.Count + $esc5p5ComboResults.Count
+    $totalVulnerabilities = $esc1Results.Count + $esc2Results.Count + $esc4e1Results.Count + $esc4p5ComboResults.Count + $esc5p5ComboResults.Count
 
     # Display analysis header
     Write-Host ""
@@ -130,6 +140,7 @@
         Write-Host ""
         Write-Host "The analyzed principal does not have any of the following vulnerability combinations:" -ForegroundColor Gray
         Write-Host "  - ESC1: SAN Spoofing (enabled templates with enrollee-supplied subject)" -ForegroundColor Gray
+        Write-Host "  - ESC2: Any Purpose EKU / No EKU (Enroll On Behalf Of)" -ForegroundColor Gray
         Write-Host "  - ESC4e1: ESC4 (enabled templates)" -ForegroundColor Gray
         Write-Host "  - ESC4p5: ESC4 (disabled templates) + ESC5 (pKIEnrollmentService certificateTemplates attribute) combinations" -ForegroundColor Gray
         Write-Host "  - ESC5p5: ESC5 (Certificate Templates container) + ESC5 (pKIEnrollmentService certificateTemplates attribute) combinations" -ForegroundColor Gray
@@ -145,6 +156,13 @@
         $attackMenu += [PSCustomObject]@{
             Key = 'ESC1'
             Label = "ESC1: SAN spoofing attack`n  - Can request certificates with arbitrary Subject Alternative Names from enabled templates"
+        }
+    }
+
+    if ($esc2Results.Count -gt 0) {
+        $attackMenu += [PSCustomObject]@{
+            Key = 'ESC2'
+            Label = "ESC2: Any Purpose EKU / No EKU attack (Enroll On Behalf Of)`n  - Can use an Any-Purpose certificate as a Request Agent to enroll on behalf of other users"
         }
     }
 
@@ -206,6 +224,9 @@
                 switch ($selectedAttack) {
                     'ESC1' {
                         Show-ESC1AttackDetails -Results $esc1Results -Principal $Principal
+                    }
+                    'ESC2' {
+                        Show-ESC2AttackDetails -Results $esc2Results -Principal $Principal
                     }
                     'ESC4e1' {
                         Show-ESC4e1AttackDetails -Results $esc4e1Results -Principal $Principal

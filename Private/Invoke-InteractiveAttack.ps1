@@ -74,37 +74,38 @@ function Invoke-InteractiveAttack {
             }
         }
         
-        if ($result -and $result.Success) {
+        # Attack functions return one object or an array (one per template/CA). Normalize.
+        $results = @($result)
+        $succeeded = @($results | Where-Object { $_ -and ($_.Success -or $_.AttackSuccess) })
+
+        if ($succeeded.Count -gt 0) {
             Write-Host "[+] $AttackType attack completed successfully!" -ForegroundColor Green
-            Write-Host ""
-            Write-Host "Attack Summary:" -ForegroundColor Cyan
-            
-            # Display attack-specific result information
-            switch ($AttackType) {
-                "ESC4e1" {
-                    Write-Host "- Template Modified: $($result.TemplateName)" -ForegroundColor White
-                    Write-Host "- Certificate Requested: $($result.CertificateRequested)" -ForegroundColor White
+
+            foreach ($r in $succeeded) {
+                # For the ESC4 chains the ESC1 result (with the TGT details) is nested
+                # under .AttackResult; a direct attack carries the fields itself.
+                $tgt = if ($r.AttackResult) { $r.AttackResult } else { $r }
+
+                # Duplicate the ESC1/EOBO result-object display.
+                [PSCustomObject]@{
+                    Success         = [bool]($r.AttackSuccess -or $r.Success)
+                    TemplateName    = $r.TemplateName
+                    TargetPrincipal = $tgt.TargetPrincipal
+                    TargetSID       = $tgt.TargetSID
+                    SanPresent      = $tgt.SanPresent
+                    Certificate     = $tgt.Certificate
+                    PkinitVerified  = $tgt.PkinitVerified
+                    Principal       = $tgt.Principal
+                    Realm           = $tgt.Realm
+                    TgtEndTime      = $tgt.TgtEndTime
+                    Error           = $tgt.Error
                 }
-                "ESC4p5" {
-                    Write-Host "- Template Modified: $($result.TemplateName)" -ForegroundColor White
-                    Write-Host "- Template Enabled: $($result.TemplateEnabled)" -ForegroundColor White
-                    Write-Host "- Certificate Requested: $($result.CertificateRequested)" -ForegroundColor White
-                }
-                "ESC5p5" {
-                    Write-Host "- Template Created: $($result.TemplateName)" -ForegroundColor White
-                    Write-Host "- Template Configured: $($result.TemplateConfigured)" -ForegroundColor White
-                    Write-Host "- Template Enabled: $($result.TemplateEnabled)" -ForegroundColor White
-                    Write-Host "- Certificate Requested: $($result.CertificateRequested)" -ForegroundColor White
-                }
-            }
-            
-            # Common result information
-            if ($result.KirbiFile) {
-                Write-Host "- Ticket Generated: $($result.KirbiFile)" -ForegroundColor White
             }
         } else {
-            if ($result.Error) {
-                Write-Host "Error: $($result.Error)" -ForegroundColor Red
+            Write-Host "[-] $AttackType attack did not succeed." -ForegroundColor Red
+            foreach ($r in $results) {
+                $err = if ($r.Error) { $r.Error } elseif ($r.ErrorMessage) { $r.ErrorMessage } else { $null }
+                if ($err) { Write-Host "Error: $err" -ForegroundColor Red }
             }
         }
     } catch {

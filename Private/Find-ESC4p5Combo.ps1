@@ -138,10 +138,14 @@ function Find-ESC4p5Combo {
             
             # Check if template is NOT enabled (disabled)
             $templateEnabled = $false
-            if ($issue.DirectoryEntry -and $issue.DirectoryEntry.Properties['Enabled']) {
-                $templateEnabled = $issue.DirectoryEntry.Properties['Enabled'].Value
+            if ($issue.DirectoryEntry -and $issue.DirectoryEntry.PSObject.Properties['Enabled']) {
+                $templateEnabled = $issue.DirectoryEntry.Enabled
+            } else {
+                $templateName = if ($issue.DirectoryEntry) { $issue.DirectoryEntry.Properties['name'].Value } else { $issue.Name }
+                Write-Warning "Template '$templateName' does not have Enabled property set - ensure Set-EnabledTemplateStatus was called"
+                continue
             }
-            
+
             if ($templateEnabled) {
                 Write-Verbose "Skipping ESC4 issue with enabled template: $($issue.DirectoryEntry.Properties['name'].Value)"
                 continue
